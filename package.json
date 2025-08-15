@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "obsidian-claude-code-gemini-cli",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Obsidian plugin for Claude Code and Gemini CLI integration",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

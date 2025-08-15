@@ -1,11 +1,11 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "claude-code-gemini-cli",
+	"name": "Claude Code + Gemini CLI",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "Integrate Claude Code and Gemini CLI to edit and create notes in your vault.",
+	"author": "Plugin Developer",
+	"authorUrl": "",
+	"fundingUrl": "",
 	"isDesktopOnly": false
 }
