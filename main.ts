@@ -87,11 +87,69 @@ export default class ClaudeCodeGeminiPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	getCurrentContext(): { file: TFile | null, selection: string } {
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		const file = activeView?.file || null;
-		const selection = activeView?.editor.getSelection() || '';
-		return { file, selection };
+	getCurrentContext(): { file: TFile | null, selection: string, debug: string } {
+		let debugInfo = '';
+		let file = null;
+		let selection = '';
+
+		// Method 1: Try getActiveFile() (most reliable)
+		file = this.app.workspace.getActiveFile();
+		debugInfo += `getActiveFile(): ${file ? file.path : 'null'}\n`;
+
+		// Method 2: Get active MarkdownView for selection
+		let activeView = null;
+		
+		// First try getMostRecentLeaf (since this worked for you)
+		const mostRecentLeaf = this.app.workspace.getMostRecentLeaf();
+		if (mostRecentLeaf?.view instanceof MarkdownView) {
+			activeView = mostRecentLeaf.view;
+			debugInfo += `Found MarkdownView via getMostRecentLeaf\n`;
+		}
+
+		// Fallback to getActiveViewOfType
+		if (!activeView) {
+			activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (activeView) {
+				debugInfo += `Found MarkdownView via getActiveViewOfType\n`;
+			} else {
+				debugInfo += `No MarkdownView found via getActiveViewOfType\n`;
+			}
+		}
+
+		// Fallback to activeLeaf
+		if (!activeView) {
+			const activeLeaf = this.app.workspace.activeLeaf;
+			if (activeLeaf?.view instanceof MarkdownView) {
+				activeView = activeLeaf.view;
+				debugInfo += `Found MarkdownView via activeLeaf\n`;
+			}
+		}
+
+		// Get selection if we have an activeView
+		if (activeView) {
+			debugInfo += `ActiveView file: ${activeView.file?.path || 'null'}\n`;
+			
+			// If getActiveFile() didn't work, use the file from activeView
+			if (!file && activeView.file) {
+				file = activeView.file;
+				debugInfo += `Using file from activeView\n`;
+			}
+			
+			// Try to get selection from the editor
+			if (activeView.editor) {
+				selection = activeView.editor.getSelection() || '';
+				debugInfo += `Selection length: ${selection.length}\n`;
+				if (selection.length > 0) {
+					debugInfo += `Selection preview: "${selection.substring(0, 50)}${selection.length > 50 ? '...' : ''}"\n`;
+				}
+			} else {
+				debugInfo += `No editor found on activeView\n`;
+			}
+		} else {
+			debugInfo += `No MarkdownView found\n`;
+		}
+
+		return { file, selection, debug: debugInfo };
 	}
 
 	async expandFileReferences(prompt: string): Promise<string> {
@@ -131,11 +189,17 @@ class ToolView extends ItemView {
 	contextDiv: HTMLDivElement;
 	isRunning: boolean = false;
 	currentProcess: any = null;
+	private eventRefs: any[] = [];
 
 	constructor(leaf: WorkspaceLeaf, plugin: ClaudeCodeGeminiPlugin, toolType: 'claude' | 'gemini') {
 		super(leaf);
 		this.plugin = plugin;
 		this.toolType = toolType;
+		this.eventRefs = [];
+	}
+
+	registerEvent(eventRef: any) {
+		this.eventRefs.push(eventRef);
 	}
 
 	getViewType() {
@@ -161,6 +225,20 @@ class ToolView extends ItemView {
 			}
 		});
 
+		// Update context when user focuses on the prompt input
+		this.promptInput.addEventListener('focus', () => {
+			this.updateContext();
+		});
+
+		// Register workspace change listeners
+		this.registerEvent(this.plugin.app.workspace.on('active-leaf-change', () => {
+			this.updateContext();
+		}));
+
+		this.registerEvent(this.plugin.app.workspace.on('file-open', () => {
+			this.updateContext();
+		}));
+
 		const buttonContainer = promptContainer.createDiv("button-container");
 		
 		this.runButton = buttonContainer.createEl("button", {
@@ -180,7 +258,16 @@ class ToolView extends ItemView {
 		this.outputDiv.createEl("h3", { text: "Output:" });
 
 		this.contextDiv = container.createDiv("context-container");
-		this.contextDiv.createEl("h3", { text: "Context:" });
+		const contextHeader = this.contextDiv.createDiv("context-header");
+		contextHeader.createEl("h3", { text: "Context:" });
+		
+		const refreshButton = contextHeader.createEl("button", {
+			text: "🔄",
+			cls: "refresh-button",
+			attr: { title: "Refresh context" }
+		});
+		refreshButton.onclick = () => this.updateContext();
+		
 		this.updateContext();
 
 		this.addStyles();
@@ -227,6 +314,26 @@ class ToolView extends ItemView {
 				border: 1px solid var(--background-modifier-border);
 				border-radius: 4px;
 			}
+			.context-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 10px;
+			}
+			.context-header h3 {
+				margin: 0;
+			}
+			.refresh-button {
+				background: var(--interactive-normal);
+				border: none;
+				border-radius: 4px;
+				padding: 4px 8px;
+				cursor: pointer;
+				font-size: 14px;
+			}
+			.refresh-button:hover {
+				background: var(--interactive-hover);
+			}
 			.output-text {
 				font-family: var(--font-monospace);
 				white-space: pre-wrap;
@@ -241,20 +348,49 @@ class ToolView extends ItemView {
 	}
 
 	updateContext() {
-		const { file, selection } = this.plugin.getCurrentContext();
-		this.contextDiv.innerHTML = '<h3>Context:</h3>';
+		const { file, selection, debug } = this.plugin.getCurrentContext();
+		
+		// Clear existing context content but keep the header
+		const existingContent = this.contextDiv.querySelector('.context-content');
+		if (existingContent) {
+			existingContent.remove();
+		}
+		
+		const contentDiv = this.contextDiv.createDiv("context-content");
 		
 		if (file) {
-			this.contextDiv.createEl("p", { text: `Current file: ${file.path}` });
+			contentDiv.createEl("p", { 
+				text: `📄 Current file: ${file.path}`,
+				cls: "context-file"
+			});
 		} else {
-			this.contextDiv.createEl("p", { text: "No file open" });
+			contentDiv.createEl("p", { 
+				text: "📄 No file open",
+				cls: "context-no-file"
+			});
 		}
 		
-		if (selection) {
-			this.contextDiv.createEl("p", { text: `Selected text: "${selection.substring(0, 100)}${selection.length > 100 ? '...' : ''}"` });
+		if (selection && selection.trim()) {
+			const truncated = selection.length > 100 ? selection.substring(0, 100) + '...' : selection;
+			contentDiv.createEl("p", { 
+				text: `✏️ Selected: "${truncated}"`,
+				cls: "context-selection"
+			});
 		} else {
-			this.contextDiv.createEl("p", { text: "No text selected" });
+			contentDiv.createEl("p", { 
+				text: "✏️ No text selected",
+				cls: "context-no-selection"
+			});
 		}
+		
+		// Debug info
+		const debugContainer = contentDiv.createEl("details");
+		const debugSummary = debugContainer.createEl("summary", { text: "🔍 Debug Info" });
+		const debugContent = debugContainer.createEl("pre", { text: debug });
+		debugContent.style.fontSize = "0.7em";
+		debugContent.style.color = "var(--text-muted)";
+		debugContent.style.whiteSpace = "pre-wrap";
+		debugContent.style.marginTop = "5px";
 	}
 
 	async runTool() {
@@ -364,7 +500,7 @@ class ToolView extends ItemView {
 		if (file) {
 			contextPrompt += `\n\nCurrent file: ${file.path}`;
 		}
-		if (selection) {
+		if (selection && selection.trim()) {
 			contextPrompt += `\n\nSelected text:\n${selection}`;
 		}
 
@@ -395,7 +531,18 @@ class ToolView extends ItemView {
 	}
 
 	async onClose() {
+		// Clean up event listeners
+		this.eventRefs.forEach(ref => {
+			if (ref && typeof ref.off === 'function') {
+				ref.off();
+			}
+		});
+		this.eventRefs = [];
 		
+		// Clean up any running process
+		if (this.currentProcess && !this.currentProcess.killed) {
+			this.currentProcess.kill('SIGTERM');
+		}
 	}
 }
 
