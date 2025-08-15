@@ -464,12 +464,19 @@ class ToolView extends ItemView {
 				this.executionDiv.textContent += output;
 				this.executionDiv.scrollTop = this.executionDiv.scrollHeight;
 				
-				// Update result with the accumulated output (assuming it's the agent's response)
+				// Filter output for result display
+				let filteredOutput = output;
+				if (this.toolType === 'gemini') {
+					// Remove "Loaded cached credentials." line for Gemini
+					filteredOutput = filteredOutput.replace(/^Loaded cached credentials\.\s*\n?/gm, '');
+				}
+				
+				// Update result with the filtered output
 				if (isFirstOutput) {
 					this.resultDiv.textContent = '';
 					isFirstOutput = false;
 				}
-				this.resultDiv.textContent += output;
+				this.resultDiv.textContent += filteredOutput;
 				this.resultDiv.scrollTop = this.resultDiv.scrollHeight;
 			});
 
