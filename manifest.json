@@ -4,8 +4,8 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Integrate Claude Code and Gemini CLI to edit and create notes in your vault.",
-	"author": "Plugin Developer",
-	"authorUrl": "",
+	"author": "BlackDragonBE",
+	"authorUrl": "https://github.com/BlackDragonBE",
 	"fundingUrl": "",
 	"isDesktopOnly": false
 }
