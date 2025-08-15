@@ -180,7 +180,11 @@ For issues, feature requests, or questions:
 
 ## License
 
-[Add your license information here]
+Copyright (C) 2025 by BlackDragonBE
+
+This plugin is licensed for non-commercial use only. You may use, copy, modify, and distribute this software for non-commercial purposes, provided that you give proper attribution to the original author (BlackDragonBE). Commercial use requires explicit written permission.
+
+See the [LICENSE](LICENSE) file for full license terms.
 
 ---
 
