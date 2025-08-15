@@ -454,6 +454,7 @@ class ToolView extends ItemView {
 			}
 
 			let fullOutput = '';
+			let resultBuffer = '';
 			let isFirstOutput = true;
 
 			this.currentProcess.stdout?.on('data', (data: Buffer) => {
@@ -464,19 +465,17 @@ class ToolView extends ItemView {
 				this.executionDiv.textContent += output;
 				this.executionDiv.scrollTop = this.executionDiv.scrollHeight;
 				
-				// Filter output for result display
-				let filteredOutput = output;
+				// For result display, accumulate in buffer and filter
+				resultBuffer += output;
+				
+				// Apply filtering for Gemini
+				let filteredResult = resultBuffer;
 				if (this.toolType === 'gemini') {
-					// Remove "Loaded cached credentials." line for Gemini
-					filteredOutput = filteredOutput.replace(/^Loaded cached credentials\.\s*\n?/gm, '');
+					filteredResult = filteredResult.replace(/^Loaded cached credentials\.\s*\n?/m, '');
 				}
 				
-				// Update result with the filtered output
-				if (isFirstOutput) {
-					this.resultDiv.textContent = '';
-					isFirstOutput = false;
-				}
-				this.resultDiv.textContent += filteredOutput;
+				// Update result display
+				this.resultDiv.textContent = filteredResult;
 				this.resultDiv.scrollTop = this.resultDiv.scrollHeight;
 			});
 
