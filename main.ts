@@ -188,6 +188,8 @@ class ToolView extends ItemView {
 	runButton: HTMLButtonElement;
 	cancelButton: HTMLButtonElement;
 	outputDiv: HTMLDivElement;
+	resultDiv: HTMLDivElement;
+	executionDiv: HTMLDivElement;
 	contextDiv: HTMLDivElement;
 	isRunning: boolean = false;
 	currentProcess: any = null;
@@ -263,19 +265,19 @@ class ToolView extends ItemView {
 		this.cancelButton.onclick = () => this.cancelTool();
 		this.cancelButton.style.display = 'none';
 
+		// Result section (always visible)
+		const resultContainer = container.createDiv("result-container");
+		resultContainer.createEl("h3", { text: "Result:" });
+		this.resultDiv = resultContainer.createDiv("result-text");
+		
+		// Command execution section (collapsible)
 		this.outputDiv = container.createDiv("output-container");
-		this.outputDiv.createEl("h3", { text: "Output:" });
+		const executionDetails = this.outputDiv.createEl("details");
+		executionDetails.createEl("summary", { text: "Command Execution" });
+		this.executionDiv = executionDetails.createDiv("execution-text");
 
 		this.contextDiv = container.createDiv("context-container");
-		const contextHeader = this.contextDiv.createDiv("context-header");
-		contextHeader.createEl("h3", { text: "Context:" });
-		
-		const refreshButton = contextHeader.createEl("button", {
-			text: "🔄",
-			cls: "refresh-button",
-			attr: { title: "Refresh context" }
-		});
-		refreshButton.onclick = () => this.updateContext();
+		this.contextDiv.createEl("h3", { text: "Context:" });
 		
 		this.updateContext();
 
@@ -326,33 +328,13 @@ class ToolView extends ItemView {
 				background: var(--background-modifier-border);
 				cursor: not-allowed;
 			}
-			.output-container, .context-container { 
+			.result-container, .output-container, .context-container { 
 				margin: 15px 0; 
 				padding: 10px;
 				border: 1px solid var(--background-modifier-border);
 				border-radius: 4px;
 			}
-			.context-header {
-				display: flex;
-				justify-content: space-between;
-				align-items: center;
-				margin-bottom: 10px;
-			}
-			.context-header h3 {
-				margin: 0;
-			}
-			.refresh-button {
-				background: var(--interactive-normal);
-				border: none;
-				border-radius: 4px;
-				padding: 4px 8px;
-				cursor: pointer;
-				font-size: 14px;
-			}
-			.refresh-button:hover {
-				background: var(--interactive-hover);
-			}
-			.output-text {
+			.result-text, .execution-text {
 				font-family: var(--font-monospace);
 				white-space: pre-wrap;
 				background: var(--background-primary-alt);
@@ -360,6 +342,13 @@ class ToolView extends ItemView {
 				border-radius: 4px;
 				max-height: 300px;
 				overflow-y: auto;
+				user-select: text;
+				-webkit-user-select: text;
+				-moz-user-select: text;
+				-ms-user-select: text;
+			}
+			.execution-text {
+				margin-top: 10px;
 			}
 		`;
 		document.head.appendChild(style);
@@ -400,15 +389,6 @@ class ToolView extends ItemView {
 				cls: "context-no-selection"
 			});
 		}
-		
-		// Debug info
-		const debugContainer = contentDiv.createEl("details");
-		const debugSummary = debugContainer.createEl("summary", { text: "🔍 Debug Info" });
-		const debugContent = debugContainer.createEl("pre", { text: debug });
-		debugContent.style.fontSize = "0.7em";
-		debugContent.style.color = "var(--text-muted)";
-		debugContent.style.whiteSpace = "pre-wrap";
-		debugContent.style.marginTop = "5px";
 	}
 
 	async runTool() {
@@ -425,44 +405,23 @@ class ToolView extends ItemView {
 		this.runButton.textContent = 'Running...';
 		this.cancelButton.style.display = 'inline-block';
 		
-		this.outputDiv.innerHTML = '<h3>Output:</h3>';
-		const outputText = this.outputDiv.createDiv("output-text");
-		outputText.textContent = 'Processing prompt...\n';
+		this.resultDiv.textContent = 'Processing prompt...';
+		this.executionDiv.textContent = '';
 
 		try {
 			prompt = await this.plugin.expandFileReferences(prompt);
 			
-			// Debug: Show the context being detected
-			const { file, selection, debug } = this.plugin.getCurrentContext();
-			outputText.textContent += `=== DEBUG INFO ===\n`;
-			outputText.textContent += `Detected file: ${file ? file.path : 'NONE'}\n`;
-			outputText.textContent += `Detected selection length: ${selection ? selection.length : 0}\n`;
-			if (selection && selection.length > 0) {
-				outputText.textContent += `Selection preview: "${selection.substring(0, 100)}${selection.length > 100 ? '...' : ''}"\n`;
-			}
-			outputText.textContent += `=== END DEBUG ===\n\n`;
-			
 			const command = this.buildCommand(prompt);
 			const vaultPath = (this.plugin.app.vault.adapter as any).basePath || (this.plugin.app.vault.adapter as any).path || process.cwd();
 			
-			// Show the exact prompt that will be sent
-			const commandMatch = command.match(/-p "(.+?)" --/);
-			if (commandMatch) {
-				const actualPrompt = commandMatch[1].replace(/\\"/g, '"');
-				outputText.textContent += `=== ACTUAL PROMPT BEING SENT ===\n`;
-				outputText.textContent += actualPrompt;
-				outputText.textContent += `\n=== END PROMPT ===\n\n`;
-			}
-			
-			outputText.textContent += `Working directory: ${vaultPath}\n`;
-			outputText.textContent += `Full command being executed:\n${command}\n\n`;
-			outputText.textContent += 'Executing...\n';
+			this.executionDiv.textContent = `Full command being executed:\n${command}\n\nExecuting...\n`;
 			console.log(command);
 			
-			await this.runCommandWithSpawn(command, vaultPath, outputText);
+			await this.runCommandWithSpawn(command, vaultPath);
 			
 		} catch (error) {
-			outputText.textContent += `\nError: ${error.message}`;
+			this.resultDiv.textContent = `Error: ${error.message}`;
+			this.executionDiv.textContent += `\nError: ${error.message}`;
 			if (error.message.includes('ENOENT')) {
 				new Notice('CLI tool not found. Check the path in settings.');
 			} else if (error.message.includes('cancelled')) {
@@ -479,7 +438,7 @@ class ToolView extends ItemView {
 		}
 	}
 
-	async runCommandWithSpawn(command: string, cwd: string, outputText: HTMLDivElement): Promise<void> {
+	async runCommandWithSpawn(command: string, cwd: string): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const timeout = this.toolType === 'claude' ? 180000 : 60000;
 			
@@ -494,26 +453,42 @@ class ToolView extends ItemView {
 				this.currentProcess.stdin.end();
 			}
 
+			let fullOutput = '';
+			let isFirstOutput = true;
+
 			this.currentProcess.stdout?.on('data', (data: Buffer) => {
 				const output = data.toString();
-				outputText.textContent += output;
-				outputText.scrollTop = outputText.scrollHeight;
+				fullOutput += output;
+				
+				// Add to execution log
+				this.executionDiv.textContent += output;
+				this.executionDiv.scrollTop = this.executionDiv.scrollHeight;
+				
+				// Update result with the accumulated output (assuming it's the agent's response)
+				if (isFirstOutput) {
+					this.resultDiv.textContent = '';
+					isFirstOutput = false;
+				}
+				this.resultDiv.textContent += output;
+				this.resultDiv.scrollTop = this.resultDiv.scrollHeight;
 			});
 
 			this.currentProcess.stderr?.on('data', (data: Buffer) => {
 				const output = data.toString();
-				outputText.textContent += '\nError: ' + output;
-				outputText.scrollTop = outputText.scrollHeight;
+				this.executionDiv.textContent += '\nStderr: ' + output;
+				this.executionDiv.scrollTop = this.executionDiv.scrollHeight;
 			});
 
 			this.currentProcess.on('close', (code: number, signal: string) => {
 				if (code === 0) {
-					outputText.textContent += '\n\nCommand completed successfully.';
+					this.executionDiv.textContent += '\n\nCommand completed successfully.';
 					resolve();
 				} else if (signal === 'SIGTERM' || signal === 'SIGKILL') {
-					outputText.textContent += '\n\nCommand was cancelled.';
+					this.executionDiv.textContent += '\n\nCommand was cancelled.';
+					this.resultDiv.textContent = 'Command was cancelled.';
 					reject(new Error('Command was cancelled'));
 				} else {
+					this.executionDiv.textContent += `\n\nCommand failed with exit code ${code}`;
 					reject(new Error(`Command failed with exit code ${code}`));
 				}
 			});
