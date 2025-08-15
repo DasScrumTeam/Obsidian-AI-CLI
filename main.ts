@@ -1,6 +1,8 @@
 import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, ItemView, WorkspaceLeaf, TFile } from 'obsidian';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
 
 const execAsync = promisify(exec);
 
@@ -217,6 +219,13 @@ class ToolView extends ItemView {
 
 		const promptContainer = container.createDiv("prompt-container");
 		promptContainer.createEl("label", { text: "Prompt:" });
+		
+		// Add help text
+		const helpText = promptContainer.createEl("div", {
+			cls: "help-text",
+			text: "💡 Tip: Open a file and/or select text for automatic context. Try: 'Translate the selected text to French' or 'Fix grammar in this file'"
+		});
+		
 		this.promptInput = promptContainer.createEl("textarea", {
 			cls: "prompt-input",
 			attr: { 
@@ -277,6 +286,15 @@ class ToolView extends ItemView {
 		const style = document.createElement('style');
 		style.textContent = `
 			.prompt-container { margin: 10px 0; }
+			.help-text {
+				font-size: 0.9em;
+				color: var(--text-muted);
+				margin: 5px 0;
+				padding: 8px;
+				background: var(--background-secondary);
+				border-radius: 4px;
+				border-left: 3px solid var(--interactive-accent);
+			}
 			.prompt-input { 
 				width: 100%; 
 				margin: 5px 0; 
@@ -413,12 +431,33 @@ class ToolView extends ItemView {
 
 		try {
 			prompt = await this.plugin.expandFileReferences(prompt);
+			
+			// Debug: Show the context being detected
+			const { file, selection, debug } = this.plugin.getCurrentContext();
+			outputText.textContent += `=== DEBUG INFO ===\n`;
+			outputText.textContent += `Detected file: ${file ? file.path : 'NONE'}\n`;
+			outputText.textContent += `Detected selection length: ${selection ? selection.length : 0}\n`;
+			if (selection && selection.length > 0) {
+				outputText.textContent += `Selection preview: "${selection.substring(0, 100)}${selection.length > 100 ? '...' : ''}"\n`;
+			}
+			outputText.textContent += `=== END DEBUG ===\n\n`;
+			
 			const command = this.buildCommand(prompt);
 			const vaultPath = (this.plugin.app.vault.adapter as any).basePath || (this.plugin.app.vault.adapter as any).path || process.cwd();
 			
+			// Show the exact prompt that will be sent
+			const commandMatch = command.match(/-p "(.+?)" --/);
+			if (commandMatch) {
+				const actualPrompt = commandMatch[1].replace(/\\"/g, '"');
+				outputText.textContent += `=== ACTUAL PROMPT BEING SENT ===\n`;
+				outputText.textContent += actualPrompt;
+				outputText.textContent += `\n=== END PROMPT ===\n\n`;
+			}
+			
 			outputText.textContent += `Working directory: ${vaultPath}\n`;
-			outputText.textContent += `Command: ${command}\n\n`;
+			outputText.textContent += `Full command being executed:\n${command}\n\n`;
 			outputText.textContent += 'Executing...\n';
+			console.log(command);
 			
 			await this.runCommandWithSpawn(command, vaultPath, outputText);
 			
@@ -497,17 +536,24 @@ class ToolView extends ItemView {
 		const { file, selection } = this.plugin.getCurrentContext();
 		let contextPrompt = prompt;
 		
+		// Add file reference using @file_path syntax
 		if (file) {
-			contextPrompt += `\n\nCurrent file: ${file.path}`;
+			contextPrompt += ` @${file.path}`;
 		}
+		
+		// Add selection as compact JSON context if available
 		if (selection && selection.trim()) {
-			contextPrompt += `\n\nSelected text:\n${selection}`;
+			const contextJson = JSON.stringify({ selectedText: selection });
+			contextPrompt += ` Context: ${contextJson}`;
 		}
 
+		// Use -p flag with proper escaping
+		const escapedPrompt = contextPrompt.replace(/"/g, '\\"');
+
 		if (this.toolType === 'claude') {
-			return `${this.plugin.settings.claudeCodePath} -p "${contextPrompt.replace(/"/g, '\\"')}" --allowedTools Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch`;
+			return `${this.plugin.settings.claudeCodePath} -p "${escapedPrompt}" --allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch`;
 		} else {
-			return `${this.plugin.settings.geminiCliPath} -p "${contextPrompt.replace(/"/g, '\\"')}" --yolo`;
+			return `${this.plugin.settings.geminiCliPath} -p "${escapedPrompt}" --yolo`;
 		}
 	}
 
