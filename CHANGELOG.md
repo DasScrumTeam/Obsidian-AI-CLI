@@ -33,6 +33,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [1.0.3] - 2025-08-16
+
+### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
 ## [1.0.2] - 2025-08-16
 
 ### Changed
@@ -117,3 +131,4 @@ When adding a new release, copy this template:
 - **Security** in case of vulnerabilities
 
 Keep entries concise but descriptive. Include issue/PR numbers when applicable.
+
