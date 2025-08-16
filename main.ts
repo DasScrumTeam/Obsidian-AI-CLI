@@ -9,17 +9,21 @@ const execAsync = promisify(exec);
 interface ClaudeCodeGeminiSettings {
 	claudeCodePath: string;
 	geminiCliPath: string;
-	defaultTool: 'claude' | 'gemini';
+	codexPath: string;
+	qwenPath: string;
 }
 
 const DEFAULT_SETTINGS: ClaudeCodeGeminiSettings = {
 	claudeCodePath: 'claude',
 	geminiCliPath: 'gemini',
-	defaultTool: 'claude'
+	codexPath: 'codex',
+	qwenPath: 'qwen'
 }
 
 const CLAUDE_VIEW_TYPE = 'claude-code-view';
 const GEMINI_VIEW_TYPE = 'gemini-cli-view';
+const CODEX_VIEW_TYPE = 'codex-view';
+const QWEN_VIEW_TYPE = 'qwen-view';
 
 export default class ClaudeCodeGeminiPlugin extends Plugin {
 	settings: ClaudeCodeGeminiSettings;
@@ -35,6 +39,12 @@ export default class ClaudeCodeGeminiPlugin extends Plugin {
 		addIcon('gemini-icon', `<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/><defs><radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)"><stop offset=".067" stop-color="#9168C0"/><stop offset=".343" stop-color="#5684D1"/><stop offset=".672" stop-color="#1BA1E3"/></radialGradient></defs></svg>`);
 		console.log('Gemini icon registered');
 
+		addIcon('codex-icon', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 158.7128 157.296"><path fill="white" d="M60.8734,57.2556v-14.9432c0-1.2586.4722-2.2029,1.5728-2.8314l30.0443-17.3023c4.0899-2.3593,8.9662-3.4599,13.9988-3.4599,18.8759,0,30.8307,14.6289,30.8307,30.2006,0,1.1007,0,2.3593-.158,3.6178l-31.1446-18.2467c-1.8872-1.1006-3.7754-1.1006-5.6629,0l-39.4812,22.9651ZM131.0276,115.4561v-35.7074c0-2.2028-.9446-3.7756-2.8318-4.8763l-39.481-22.9651,12.8982-7.3934c1.1007-.6285,2.0453-.6285,3.1458,0l30.0441,17.3024c8.6523,5.0341,14.4708,15.7296,14.4708,26.1107,0,11.9539-7.0769,22.965-18.2461,27.527v.0021ZM51.593,83.9964l-12.8982-7.5497c-1.1007-.6285-1.5728-1.5728-1.5728-2.8314v-34.6048c0-16.8303,12.8982-29.5722,30.3585-29.5722,6.607,0,12.7403,2.2029,17.9324,6.1349l-30.987,17.9324c-1.8871,1.1007-2.8314,2.6735-2.8314,4.8764v45.6159l-.0014-.0015ZM79.3562,100.0403l-18.4829-10.3811v-22.0209l18.4829-10.3811,18.4812,10.3811v22.0209l-18.4812,10.3811ZM91.2319,147.8591c-6.607,0-12.7403-2.2031-17.9324-6.1344l30.9866-17.9333c1.8872-1.1005,2.8318-2.6728,2.8318-4.8759v-45.616l13.0564,7.5498c1.1005.6285,1.5723,1.5728,1.5723,2.8314v34.6051c0,16.8297-13.0564,29.5723-30.5147,29.5723v.001ZM53.9522,112.7822l-30.0443-17.3024c-8.652-5.0343-14.471-15.7296-14.471-26.1107,0-12.1119,7.2356-22.9652,18.403-27.5272v35.8634c0,2.2028.9443,3.7756,2.8314,4.8763l39.3248,22.8068-12.8982,7.3938c-1.1007.6287-2.045.6287-3.1456,0ZM52.2229,138.5791c-17.7745,0-30.8306-13.3713-30.8306-29.8871,0-1.2585.1578-2.5169.3143-3.7754l30.987,17.9323c1.8871,1.1005,3.7757,1.1005,5.6628,0l39.4811-22.807v14.9435c0,1.2585-.4721,2.2021-1.5728,2.8308l-30.0443,17.3025c-4.0898,2.359-8.9662,3.4605-13.9989,3.4605h.0014ZM91.2319,157.296c19.0327,0,34.9188-13.5272,38.5383-31.4594,17.6164-4.562,28.9425-21.0779,28.9425-37.908,0-11.0112-4.719-21.7066-13.2133-29.4143.7867-3.3035,1.2595-6.607,1.2595-9.909,0-22.4929-18.2471-39.3247-39.3251-39.3247-4.2461,0-8.3363.6285-12.4262,2.045-7.0792-6.9213-16.8318-11.3254-27.5271-11.3254-19.0331,0-34.9191,13.5268-38.5384,31.4591C11.3255,36.0212,0,52.5373,0,69.3675c0,11.0112,4.7184,21.7065,13.2125,29.4142-.7865,3.3035-1.2586,6.6067-1.2586,9.9092,0,22.4923,18.2466,39.3241,39.3248,39.3241,4.2462,0,8.3362-.6277,12.426-2.0441,7.0776,6.921,16.8302,11.3251,27.5271,11.3251Z"/></svg>`);
+		console.log('Codex icon registered');
+
+		addIcon('qwen-icon', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><path d="M174.82 108.75L155.38 75L165.64 57.75C166.46 56.31 166.46 54.53 165.64 53.09L155.38 35.84C154.86 34.91 153.87 34.33 152.78 34.33H114.88L106.14 19.03C105.62 18.1 104.63 17.52 103.54 17.52H83.3C82.21 17.52 81.22 18.1 80.7 19.03L61.26 52.77H41.02C39.93 52.77 38.94 53.35 38.42 54.28L28.16 71.53C27.34 72.97 27.34 74.75 28.16 76.19L45.52 107.5L36.78 122.8C35.96 124.24 35.96 126.02 36.78 127.46L47.04 144.71C47.56 145.64 48.55 146.22 49.64 146.22H87.54L96.28 161.52C96.8 162.45 97.79 163.03 98.88 163.03H119.12C120.21 163.03 121.2 162.45 121.72 161.52L141.16 127.78H158.52C159.61 127.78 160.6 127.2 161.12 126.27L171.38 109.02C172.2 107.58 172.2 105.8 171.38 104.36L174.82 108.75Z" fill="url(#paint0_radial)"/><path d="M119.12 163.03H98.88L87.54 144.71H49.64L61.26 126.39H80.7L38.42 55.29H61.26L83.3 19.03L93.56 37.35L83.3 55.29H161.58L151.32 72.54L170.76 106.28H151.32L141.16 88.34L101.18 163.03H119.12Z" fill="white"/><path d="M127.86 79.83H76.14L101.18 122.11L127.86 79.83Z" fill="url(#paint1_radial)"/><defs><radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) rotate(90) scale(100)"><stop stop-color="#665CEE"/><stop offset="1" stop-color="#332E91"/></radialGradient><radialGradient id="paint1_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(100 100) rotate(90) scale(100)"><stop stop-color="#665CEE"/><stop offset="1" stop-color="#332E91"/></radialGradient></defs></svg>`);
+		console.log('Qwen icon registered');
+
 		this.registerView(
 			CLAUDE_VIEW_TYPE,
 			(leaf) => new ToolView(leaf, this, 'claude')
@@ -43,6 +53,16 @@ export default class ClaudeCodeGeminiPlugin extends Plugin {
 		this.registerView(
 			GEMINI_VIEW_TYPE,
 			(leaf) => new ToolView(leaf, this, 'gemini')
+		);
+
+		this.registerView(
+			CODEX_VIEW_TYPE,
+			(leaf) => new ToolView(leaf, this, 'codex')
+		);
+
+		this.registerView(
+			QWEN_VIEW_TYPE,
+			(leaf) => new ToolView(leaf, this, 'qwen')
 		);
 
 		this.addCommand({
@@ -58,6 +78,22 @@ export default class ClaudeCodeGeminiPlugin extends Plugin {
 			name: 'Gemini CLI',
 			callback: () => {
 				this.activateView(GEMINI_VIEW_TYPE);
+			}
+		});
+
+		this.addCommand({
+			id: 'open-codex',
+			name: 'OpenAI Codex',
+			callback: () => {
+				this.activateView(CODEX_VIEW_TYPE);
+			}
+		});
+
+		this.addCommand({
+			id: 'open-qwen',
+			name: 'Qwen Code',
+			callback: () => {
+				this.activateView(QWEN_VIEW_TYPE);
 			}
 		});
 
@@ -87,6 +123,8 @@ export default class ClaudeCodeGeminiPlugin extends Plugin {
 	onunload() {
 		this.app.workspace.detachLeavesOfType(CLAUDE_VIEW_TYPE);
 		this.app.workspace.detachLeavesOfType(GEMINI_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(CODEX_VIEW_TYPE);
+		this.app.workspace.detachLeavesOfType(QWEN_VIEW_TYPE);
 	}
 
 	async loadSettings() {
@@ -191,7 +229,7 @@ export default class ClaudeCodeGeminiPlugin extends Plugin {
 
 class ToolView extends ItemView {
 	plugin: ClaudeCodeGeminiPlugin;
-	toolType: 'claude' | 'gemini';
+	toolType: 'claude' | 'gemini' | 'codex' | 'qwen';
 	promptInput: HTMLTextAreaElement;
 	runButton: HTMLButtonElement;
 	cancelButton: HTMLButtonElement;
@@ -203,7 +241,7 @@ class ToolView extends ItemView {
 	currentProcess: any = null;
 	private eventRefs: any[] = [];
 
-	constructor(leaf: WorkspaceLeaf, plugin: ClaudeCodeGeminiPlugin, toolType: 'claude' | 'gemini') {
+	constructor(leaf: WorkspaceLeaf, plugin: ClaudeCodeGeminiPlugin, toolType: 'claude' | 'gemini' | 'codex' | 'qwen') {
 		super(leaf);
 		this.plugin = plugin;
 		this.toolType = toolType;
@@ -215,15 +253,31 @@ class ToolView extends ItemView {
 	}
 
 	getViewType() {
-		return this.toolType === 'claude' ? CLAUDE_VIEW_TYPE : GEMINI_VIEW_TYPE;
+		switch (this.toolType) {
+			case 'claude': return CLAUDE_VIEW_TYPE;
+			case 'gemini': return GEMINI_VIEW_TYPE;
+			case 'codex': return CODEX_VIEW_TYPE;
+			case 'qwen': return QWEN_VIEW_TYPE;
+		}
 	}
 
 	getDisplayText() {
-		return this.toolType === 'claude' ? "Claude Code" : "Gemini CLI";
+		switch (this.toolType) {
+			case 'claude': return "Claude Code";
+			case 'gemini': return "Gemini CLI";
+			case 'codex': return "OpenAI Codex";
+			case 'qwen': return "Qwen Code";
+		}
 	}
 
 	getIcon() {
-		const iconName = this.toolType === 'claude' ? 'claude-icon' : 'gemini-icon';
+		let iconName: string;
+		switch (this.toolType) {
+			case 'claude': iconName = 'claude-icon'; break;
+			case 'gemini': iconName = 'gemini-icon'; break;
+			case 'codex': iconName = 'codex-icon'; break;
+			case 'qwen': iconName = 'qwen-icon'; break;
+		}
 		console.log(`getIcon() called for ${this.toolType}, returning: ${iconName}`);
 		return iconName;
 	}
@@ -572,18 +626,31 @@ class ToolView extends ItemView {
 		}
 
 		// Always use stdin for consistency and robustness
-		if (this.toolType === 'claude') {
-			return {
-				command: `${this.plugin.settings.claudeCodePath} --allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch`,
-				useStdin: true,
-				stdinContent: contextPrompt
-			};
-		} else {
-			return {
-				command: `${this.plugin.settings.geminiCliPath} --yolo`,
-				useStdin: true,
-				stdinContent: contextPrompt
-			};
+		switch (this.toolType) {
+			case 'claude':
+				return {
+					command: `${this.plugin.settings.claudeCodePath} --allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch`,
+					useStdin: true,
+					stdinContent: contextPrompt
+				};
+			case 'gemini':
+				return {
+					command: `${this.plugin.settings.geminiCliPath} --yolo`,
+					useStdin: true,
+					stdinContent: contextPrompt
+				};
+			case 'codex':
+				return {
+					command: `${this.plugin.settings.codexPath}`,
+					useStdin: true,
+					stdinContent: contextPrompt
+				};
+			case 'qwen':
+				return {
+					command: `${this.plugin.settings.qwenPath}`,
+					useStdin: true,
+					stdinContent: contextPrompt
+				};
 		}
 	}
 
@@ -635,7 +702,7 @@ class ClaudeCodeGeminiSettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Claude Code + Gemini CLI Settings'});
+		containerEl.createEl('h2', {text: 'AI Tools Settings'});
 
 		new Setting(containerEl)
 			.setName('Claude Code Path')
@@ -680,19 +747,49 @@ class ClaudeCodeGeminiSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Default Tool')
-			.setDesc('Which tool to prefer when using keyboard shortcuts')
-			.addDropdown(dropdown => dropdown
-				.addOption('claude', 'Claude Code')
-				.addOption('gemini', 'Gemini CLI')
-				.setValue(this.plugin.settings.defaultTool)
-				.onChange(async (value: 'claude' | 'gemini') => {
-					this.plugin.settings.defaultTool = value;
+			.setName('OpenAI Codex Path')
+			.setDesc('Path to the OpenAI Codex CLI executable')
+			.addText(text => text
+				.setPlaceholder('codex')
+				.setValue(this.plugin.settings.codexPath)
+				.onChange(async (value) => {
+					this.plugin.settings.codexPath = value;
 					await this.plugin.saveSettings();
+				}))
+			.addButton(button => button
+				.setButtonText('Test')
+				.onClick(async () => {
+					try {
+						await execAsync(`${this.plugin.settings.codexPath} --version`);
+						new Notice('OpenAI Codex CLI found and working!');
+					} catch (error) {
+						new Notice('OpenAI Codex CLI not found or not working. Check the path.');
+					}
+				}));
+
+		new Setting(containerEl)
+			.setName('Qwen Code Path')
+			.setDesc('Path to the Qwen Code CLI executable')
+			.addText(text => text
+				.setPlaceholder('qwen')
+				.setValue(this.plugin.settings.qwenPath)
+				.onChange(async (value) => {
+					this.plugin.settings.qwenPath = value;
+					await this.plugin.saveSettings();
+				}))
+			.addButton(button => button
+				.setButtonText('Test')
+				.onClick(async () => {
+					try {
+						await execAsync(`${this.plugin.settings.qwenPath} --version`);
+						new Notice('Qwen Code CLI found and working!');
+					} catch (error) {
+						new Notice('Qwen Code CLI not found or not working. Check the path.');
+					}
 				}));
 
 		containerEl.createEl('p', {
-			text: 'Note: Make sure Claude Code and/or Gemini CLI are installed and accessible from your system PATH.',
+			text: 'Note: Make sure the CLI tools are installed and accessible from your system PATH.',
 			cls: 'setting-item-description'
 		});
 	}

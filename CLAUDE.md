@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is an Obsidian plugin that integrates Claude Code and Gemini CLI tools directly into the Obsidian workspace. Users can execute AI commands through sidebar panels while automatically passing file context and selected text.
+This is an Obsidian plugin that integrates multiple AI CLI tools (Claude Code, Gemini CLI, OpenAI Codex, and Qwen Code) directly into the Obsidian workspace. Users can execute AI commands through sidebar panels while automatically passing file context and selected text.
 
 ## Build Commands
 
@@ -16,15 +16,15 @@ This is an Obsidian plugin that integrates Claude Code and Gemini CLI tools dire
 
 ### Core Plugin Structure
 - **Main Plugin Class**: `ClaudeCodeGeminiPlugin` - Manages plugin lifecycle, settings, and view registration
-- **Unified View System**: Single `ToolView` class handles both Claude Code and Gemini CLI interfaces using a `toolType` parameter
-- **Settings Management**: `ClaudeCodeGeminiSettings` interface with CLI tool paths and preferences
+- **Unified View System**: Single `ToolView` class handles all AI tool interfaces using a `toolType` parameter
+- **Settings Management**: `ClaudeCodeGeminiSettings` interface with CLI tool paths for all supported tools
 
 ### Key Design Patterns
 
-**Unified Tool Implementation**: Both Claude Code and Gemini CLI share the same `ToolView` class implementation. The `toolType: 'claude' | 'gemini'` parameter determines:
+**Unified Tool Implementation**: All AI tools (Claude Code, Gemini CLI, OpenAI Codex, and Qwen Code) share the same `ToolView` class implementation. The `toolType: 'claude' | 'gemini' | 'codex' | 'qwen'` parameter determines:
 - Command construction format in `buildCommand()`
 - Timeout of 1 minute to wait for the AI to respond
-- Tool-specific CLI arguments
+- Tool-specific CLI arguments and options
 
 **Context Detection Strategy**: The plugin uses multiple fallback methods to detect active files and selections:
 1. `app.workspace.getActiveFile()` for file detection
@@ -44,14 +44,14 @@ The plugin passes context to CLI tools using:
 - Selected text: Single-line JSON format `Context: {"selectedText":"..."}`
 - Example: `"Translate to French @document.md Context: {"selectedText":"Hello world"}"`
 - **Delivery Method**: All prompts sent via stdin to avoid shell escaping issues
-- **Consistency**: Both Claude Code and Gemini CLI use identical stdin-based approach
+- **Consistency**: All supported AI tools use identical stdin-based approach
 
 ### View System
 
 **Sidebar Panel Management**:
-- Views are registered with `CLAUDE_VIEW_TYPE` and `GEMINI_VIEW_TYPE` constants
+- Views are registered with `CLAUDE_VIEW_TYPE`, `GEMINI_VIEW_TYPE`, `CODEX_VIEW_TYPE`, and `QWEN_VIEW_TYPE` constants
 - `activateView()` method handles sidebar creation and focus
-- Auto-cleanup on plugin unload via `detachLeavesOfType()`
+- Auto-cleanup on plugin unload via `detachLeavesOfType()` for all view types
 
 **UI Components Per Panel**:
 - Prompt textarea with help text
@@ -63,9 +63,9 @@ The plugin passes context to CLI tools using:
 ### Settings Integration
 
 Settings tab provides:
-- CLI tool path configuration with test buttons
-- Default tool preference
-- Path validation via version check commands
+- CLI tool path configuration with test buttons for all four AI tools
+- Path validation via version check commands for each tool
+- Individual tool enable/disable options
 
 ## File Context Management
 
@@ -94,8 +94,31 @@ Settings tab provides:
 - Maintains headless operation through piping (both tools detect piped input automatically)
 
 **Execution Flow**:
-1. Build command without prompt content (e.g., `claude --allowedTools ...` or `gemini --yolo`)
+1. Build command without prompt content (e.g., `claude --allowedTools ...`, `gemini --yolo`, `codex`, or `qwen`)
 2. Spawn process with stdin pipe
 3. Write full prompt content to stdin
 4. Close stdin to signal completion
 5. Stream stdout/stderr to UI in real-time
+
+## Supported AI Tools
+
+### Claude Code
+- **Command**: `claude --allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch`
+- **Icon**: Custom Claude logo (orange/brown)
+- **Context**: Full file references and selected text support
+
+### Gemini CLI
+- **Command**: `gemini --yolo`
+- **Icon**: Custom Gemini logo (blue gradient)
+- **Context**: Full file references and selected text support
+- **Output Filtering**: Automatically filters "Loaded cached credentials" messages
+
+### OpenAI Codex
+- **Command**: `codex`
+- **Icon**: Custom Codex logo (white geometric pattern)
+- **Context**: Full file references and selected text support
+
+### Qwen Code
+- **Command**: `qwen`
+- **Icon**: Custom Qwen logo (purple diamond pattern)
+- **Context**: Full file references and selected text support

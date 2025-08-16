@@ -1,15 +1,21 @@
-# Obsidian Claude Code + Gemini CLI Plugin
+# Obsidian AI Tools Plugin
 
-An Obsidian plugin that integrates Claude Code and Gemini CLI tools directly into your workspace. Execute AI commands through convenient sidebar panels while automatically passing file context and selected text.
+An Obsidian plugin that integrates multiple AI CLI tools directly into your workspace. Execute AI commands through convenient sidebar panels while automatically passing file context and selected text.
+
+**Supported AI Tools:**
+- Claude Code CLI
+- Gemini CLI
+- OpenAI Codex
+- Qwen Code
 
 ## Features
 
-- **Dual AI Integration**: Access both Claude Code and Gemini CLI from dedicated sidebar panels
+- **Multi-AI Integration**: Access Claude Code, Gemini CLI, OpenAI Codex, and Qwen Code from dedicated sidebar panels
 - **Automatic Context Passing**: Current file and selected text are automatically included in prompts
 - **File Reference Support**: Use `@filename.md` syntax to reference other files in your vault
 - **Split Output Display**: Clean result view with collapsible command execution details
 - **Real-time Streaming**: See AI responses as they're generated
-- **Custom Icons**: Distinctive Claude and Gemini icons in the sidebar
+- **Custom Icons**: Distinctive icons for each AI tool in the sidebar
 
 ## Donate
 
@@ -31,6 +37,16 @@ Before using this plugin, you need to have the CLI tools installed:
 - Ensure it's accessible via the `gemini` command in your terminal  
 - Test with: `gemini --version`
 
+### OpenAI Codex (Optional)
+- Install the OpenAI Codex CLI tool
+- Ensure it's accessible via the `codex` command in your terminal
+- Test with: `codex --version`
+
+### Qwen Code (Optional)
+- Install the Qwen Code CLI tool
+- Ensure it's accessible via the `qwen` command in your terminal
+- Test with: `qwen --version`
+
 ## Installation
 
 ### Option 1: Manual Installation (Recommended for Development)
@@ -47,7 +63,7 @@ Before using this plugin, you need to have the CLI tools installed:
    npm run build
    ```
 4. In Obsidian, go to Settings → Community Plugins
-5. Enable "Obsidian Claude Code + Gemini CLI"
+5. Enable "Obsidian AI Tools"
 
 ### Option 2: BRAT Installation (Recommended for regular use)
 
@@ -59,18 +75,21 @@ Before using this plugin, you need to have the CLI tools installed:
 
 ### 1. Configure CLI Paths
 
-1. Go to Settings → Community Plugins → Obsidian Claude Code + Gemini CLI → Options
+1. Go to Settings → Community Plugins → Obsidian AI Tools → Options
 2. Set the paths for your CLI tools:
    - **Claude Code Path**: Usually `claude` (if in PATH) or full path to executable
    - **Gemini CLI Path**: Usually `gemini` (if in PATH) or full path to executable
+   - **OpenAI Codex Path**: Usually `codex` (if in PATH) or full path to executable
+   - **Qwen Code Path**: Usually `qwen` (if in PATH) or full path to executable
 3. Use the "Test" buttons to verify each tool is working
-4. Choose your default tool preference
 
 ### 2. Open Sidebar Panels
 
 Use the command palette (Ctrl/Cmd + P) and search for:
 - "Claude Code" - Opens the Claude Code sidebar panel
 - "Gemini CLI" - Opens the Gemini CLI sidebar panel
+- "OpenAI Codex" - Opens the OpenAI Codex sidebar panel
+- "Qwen Code" - Opens the Qwen Code sidebar panel
 
 Or use the sidebar icons that appear after enabling the plugin.
 
@@ -79,7 +98,7 @@ Or use the sidebar icons that appear after enabling the plugin.
 ### Basic Usage
 
 1. **Open a file** and/or **select text** you want to work with
-2. **Open a sidebar panel** (Claude Code or Gemini CLI)
+2. **Open a sidebar panel** (Claude Code, Gemini CLI, OpenAI Codex, or Qwen Code)
 3. **Enter your prompt** in the text area
 4. **Click Run** to execute
 
@@ -147,8 +166,9 @@ This is automatically filtered out in the Result section but remains visible in 
 ### Settings Options
 
 - **Claude Code Path**: Path to Claude Code CLI executable
-- **Gemini CLI Path**: Path to Gemini CLI executable  
-- **Default Tool**: Which tool to prefer for keyboard shortcuts
+- **Gemini CLI Path**: Path to Gemini CLI executable
+- **OpenAI Codex Path**: Path to OpenAI Codex CLI executable
+- **Qwen Code Path**: Path to Qwen Code CLI executable
 
 ### File Structure
 ```
@@ -158,8 +178,6 @@ This is automatically filtered out in the Result section but remains visible in 
 ├── versions.json    # Version history
 ├── package.json     # Dependencies
 ├── CLAUDE.md        # Development notes
-├── claude.svg       # Claude icon
-├── gemini.svg       # Gemini icon
 └── README.md        # This file
 ```
 
@@ -173,7 +191,7 @@ npm run build  # Production build
 ```
 
 ### Architecture Notes
-- **Unified View System**: Single `ToolView` class handles both tools
+- **Unified View System**: Single `ToolView` class handles all AI tools
 - **Context Detection**: Multiple fallback methods for file/selection detection
 - **Process Management**: Node.js spawn with proper cleanup and stdin handling
 - **Real-time Streaming**: Live output updates during execution
