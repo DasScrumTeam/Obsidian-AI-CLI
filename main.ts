@@ -364,6 +364,15 @@ class ToolView extends ItemView {
 			.execution-text {
 				margin-top: 10px;
 			}
+			.context-notice {
+				font-size: 0.85em;
+				color: var(--text-muted);
+				margin: 8px 0;
+				padding: 6px;
+				background: var(--background-secondary);
+				border-radius: 3px;
+				border-left: 2px solid var(--interactive-accent);
+			}
 		`;
 		document.head.appendChild(style);
 	}
@@ -403,6 +412,13 @@ class ToolView extends ItemView {
 				cls: "context-no-selection"
 			});
 		}
+		
+		// Add notice about text selection requirement
+		const noticeDiv = contentDiv.createDiv("selection-notice");
+		noticeDiv.createEl("p", {
+			text: "💡 Note: Text selection only works when the note is in edit mode, not preview mode.",
+			cls: "context-notice"
+		});
 	}
 
 	async runTool() {
