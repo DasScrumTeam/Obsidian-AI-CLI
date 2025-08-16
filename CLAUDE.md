@@ -1,0 +1,101 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+This is an Obsidian plugin that integrates Claude Code and Gemini CLI tools directly into the Obsidian workspace. Users can execute AI commands through sidebar panels while automatically passing file context and selected text.
+
+## Build Commands
+
+- `npm run dev` - Development build with watch mode
+- `npm run build` - Production build (TypeScript check + esbuild)
+- `npm run version` - Version bump and update manifest/versions files
+
+## Architecture
+
+### Core Plugin Structure
+- **Main Plugin Class**: `ClaudeCodeGeminiPlugin` - Manages plugin lifecycle, settings, and view registration
+- **Unified View System**: Single `ToolView` class handles both Claude Code and Gemini CLI interfaces using a `toolType` parameter
+- **Settings Management**: `ClaudeCodeGeminiSettings` interface with CLI tool paths and preferences
+
+### Key Design Patterns
+
+**Unified Tool Implementation**: Both Claude Code and Gemini CLI share the same `ToolView` class implementation. The `toolType: 'claude' | 'gemini'` parameter determines:
+- Command construction format in `buildCommand()`
+- Timeout values (3min for Claude, 1min for Gemini)
+- Tool-specific CLI arguments
+
+**Context Detection Strategy**: The plugin uses multiple fallback methods to detect active files and selections:
+1. `app.workspace.getActiveFile()` for file detection
+2. `getMostRecentLeaf()` → `getActiveViewOfType(MarkdownView)` → `activeLeaf` for editor access
+3. Real-time context updates via workspace event listeners
+
+**Process Management**: Uses Node.js `spawn` for CLI execution with:
+- Real-time output streaming to UI
+- Cancel functionality with SIGTERM/SIGKILL
+- stdin-based prompt delivery for robust handling of complex content
+- Comprehensive execution logging with full prompt visibility
+
+### Context Passing Format
+
+The plugin passes context to CLI tools using:
+- File references: `@file_path` syntax (e.g., `@document.md`)
+- Selected text: Single-line JSON format `Context: {"selectedText":"..."}`
+- Example: `"Translate to French @document.md Context: {"selectedText":"Hello world"}"`
+- **Delivery Method**: All prompts sent via stdin to avoid shell escaping issues
+- **Consistency**: Both Claude Code and Gemini CLI use identical stdin-based approach
+
+### View System
+
+**Sidebar Panel Management**:
+- Views are registered with `CLAUDE_VIEW_TYPE` and `GEMINI_VIEW_TYPE` constants
+- `activateView()` method handles sidebar creation and focus
+- Auto-cleanup on plugin unload via `detachLeavesOfType()`
+
+**UI Components Per Panel**:
+- Prompt textarea with help text
+- Run/Cancel button pair
+- Real-time output display with scrolling
+- Context display with refresh functionality
+- Debug information (collapsible)
+
+### Settings Integration
+
+Settings tab provides:
+- CLI tool path configuration with test buttons
+- Default tool preference
+- Path validation via version check commands
+
+## File Context Management
+
+**File Reference Expansion**: The `expandFileReferences()` method processes `@filename.md` syntax in prompts by reading file contents and replacing references with actual content.
+
+**Event-Driven Updates**: Context automatically refreshes on:
+- `active-leaf-change` workspace events
+- `file-open` events  
+- Prompt input focus
+- Manual refresh button clicks
+
+## Development Notes
+
+**TypeScript Configuration**: Uses strict null checks and ES6+ target with DOM libraries. Build process includes TypeScript checking before esbuild compilation.
+
+**Process Execution**: Commands are executed in the vault directory context, not the plugin directory. Working directory is determined by `vault.adapter.basePath`.
+
+**Error Handling**: Comprehensive error handling for missing CLI tools (ENOENT detection), process cancellation, and timeout scenarios with user-friendly notices.
+
+## Command Execution Strategy
+
+**stdin-Based Approach**: The plugin uses stdin for all prompt delivery to both CLI tools:
+- Eliminates shell escaping complexity and security vulnerabilities
+- Handles complex text with newlines, quotes, and special characters reliably
+- Provides consistent behavior between Claude Code and Gemini CLI
+- Maintains headless operation through piping (both tools detect piped input automatically)
+
+**Execution Flow**:
+1. Build command without prompt content (e.g., `claude --allowedTools ...` or `gemini --yolo`)
+2. Spawn process with stdin pipe
+3. Write full prompt content to stdin
+4. Close stdin to signal completion
+5. Stream stdout/stderr to UI in real-time
