@@ -441,13 +441,20 @@ class ToolView extends ItemView {
 		try {
 			prompt = await this.plugin.expandFileReferences(prompt);
 			
-			const command = this.buildCommand(prompt);
+			const commandInfo = this.buildCommand(prompt);
 			const vaultPath = (this.plugin.app.vault.adapter as any).basePath || (this.plugin.app.vault.adapter as any).path || process.cwd();
 			
-			this.executionDiv.textContent = `Full command being executed:\n${command}\n\nExecuting...\n`;
-			console.log(command);
+			let executionText = `Full command being executed:\n${commandInfo.command}\n`;
 			
-			await this.runCommandWithSpawn(command, vaultPath);
+			if (commandInfo.useStdin && commandInfo.stdinContent) {
+				executionText += `\nPrompt content being sent via stdin:\n${'-'.repeat(50)}\n${commandInfo.stdinContent}\n${'-'.repeat(50)}\n`;
+			}
+			
+			executionText += '\nExecuting...\n';
+			this.executionDiv.textContent = executionText;
+			console.log(commandInfo.command);
+			
+			await this.runCommandWithSpawn(commandInfo.command, vaultPath, commandInfo.stdinContent);
 			
 		} catch (error) {
 			this.resultDiv.textContent = `Error: ${error.message}`;
@@ -468,7 +475,7 @@ class ToolView extends ItemView {
 		}
 	}
 
-	async runCommandWithSpawn(command: string, cwd: string): Promise<void> {
+	async runCommandWithSpawn(command: string, cwd: string, stdinContent?: string): Promise<void> {
 		return new Promise((resolve, reject) => {
 			const timeout = this.toolType === 'claude' ? 180000 : 60000;
 			
@@ -478,14 +485,20 @@ class ToolView extends ItemView {
 				stdio: ['pipe', 'pipe', 'pipe']
 			});
 
-			// Close stdin immediately to prevent hanging
+			// Handle stdin content or close immediately to prevent hanging
 			if (this.currentProcess.stdin) {
-				this.currentProcess.stdin.end();
+				if (stdinContent) {
+					this.currentProcess.stdin.write(stdinContent);
+					this.currentProcess.stdin.end();
+				} else {
+					this.currentProcess.stdin.end();
+				}
 			}
 
 			let fullOutput = '';
 			let resultBuffer = '';
 			let isFirstOutput = true;
+
 
 			this.currentProcess.stdout?.on('data', (data: Buffer) => {
 				const output = data.toString();
@@ -543,11 +556,11 @@ class ToolView extends ItemView {
 		});
 	}
 
-	buildCommand(prompt: string): string {
+	buildCommand(prompt: string): { command: string, useStdin: boolean, stdinContent: string } {
 		const { file, selection } = this.plugin.getCurrentContext();
 		let contextPrompt = prompt;
 		
-		// Add file reference using @file_path syntax
+		// Add file reference using @file_path syntax (both tools support this)
 		if (file) {
 			contextPrompt += ` @${file.path}`;
 		}
@@ -558,13 +571,19 @@ class ToolView extends ItemView {
 			contextPrompt += ` Context: ${contextJson}`;
 		}
 
-		// Use -p flag with proper escaping
-		const escapedPrompt = contextPrompt.replace(/"/g, '\\"');
-
+		// Always use stdin for consistency and robustness
 		if (this.toolType === 'claude') {
-			return `${this.plugin.settings.claudeCodePath} -p "${escapedPrompt}" --allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch`;
+			return {
+				command: `${this.plugin.settings.claudeCodePath} --allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch`,
+				useStdin: true,
+				stdinContent: contextPrompt
+			};
 		} else {
-			return `${this.plugin.settings.geminiCliPath} -p "${escapedPrompt}" --yolo`;
+			return {
+				command: `${this.plugin.settings.geminiCliPath} --yolo`,
+				useStdin: true,
+				stdinContent: contextPrompt
+			};
 		}
 	}
 

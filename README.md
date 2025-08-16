@@ -81,7 +81,8 @@ The plugin automatically:
 - Detects your current file and adds it as `@filename.md`
 - Includes selected text as context
 - Displays the AI response in the "Result" section
-- Shows command execution details in the collapsible section
+- Shows command execution details and full prompt content in the collapsible section
+- Uses stdin for robust handling of complex text with special characters
 
 ### Advanced Features
 
@@ -168,8 +169,10 @@ npm run build  # Production build
 ### Architecture Notes
 - **Unified View System**: Single `ToolView` class handles both tools
 - **Context Detection**: Multiple fallback methods for file/selection detection
-- **Process Management**: Node.js spawn with proper cleanup
+- **Process Management**: Node.js spawn with proper cleanup and stdin handling
 - **Real-time Streaming**: Live output updates during execution
+- **Robust Input Handling**: All prompts use stdin to avoid shell escaping issues
+- **Enhanced Logging**: Full visibility into prompt content and execution details
 
 ## Support
 

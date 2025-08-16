@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial release preparation
 
 ### Changed
 
@@ -19,6 +18,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 ### Security
+
+## [1.1.0] - 2025-08-16
+
+### Added
+- Comprehensive prompt content display in execution logs
+- Full stdin content visibility for debugging
+
+### Changed
+- **BREAKING**: All prompts now use stdin instead of command line arguments for improved robustness
+- Command construction simplified to always use stdin approach
+- Enhanced execution logging to show full prompt content being sent
+
+### Fixed
+- Complex text selections with special characters no longer break into separate commands
+- Improved handling of prompts with newlines, quotes, and formatting
+- Shell escaping issues completely eliminated through stdin approach
+
+### Security
+- Eliminated shell injection vulnerabilities by removing command line argument escaping
 
 ## [1.0.0] - 2025-08-15
 
