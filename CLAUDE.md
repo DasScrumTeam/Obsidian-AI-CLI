@@ -12,6 +12,14 @@ This is an Obsidian plugin that integrates multiple AI CLI tools (Claude Code, G
 - `npm run build` - Production build (TypeScript check + esbuild)
 - `npm run version` - Version bump and update manifest/versions files
 
+## Updating the Plugin
+
+When updating the plugin, make sure to update the version number in the following files:
+
+- `manifest.json`
+- `versions.json`
+- `package.json`
+
 ## Architecture
 
 ### Core Plugin Structure

@@ -11,13 +11,21 @@ interface ClaudeCodeGeminiSettings {
 	geminiCliPath: string;
 	codexPath: string;
 	qwenPath: string;
+	claudeParams: string;
+	geminiParams: string;
+	codexParams: string;
+	qwenParams: string;
 }
 
 const DEFAULT_SETTINGS: ClaudeCodeGeminiSettings = {
 	claudeCodePath: 'claude',
 	geminiCliPath: 'gemini',
 	codexPath: 'codex',
-	qwenPath: 'qwen'
+	qwenPath: 'qwen',
+	claudeParams: '--allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch',
+	geminiParams: '--yolo',
+	codexParams: 'workspace-write --ask-for-approval never',
+	qwenParams: '--yolo'
 }
 
 const CLAUDE_VIEW_TYPE = 'claude-code-view';
@@ -566,9 +574,16 @@ class ToolView extends ItemView {
 				resultBuffer += output;
 				
 				// Apply filtering for Gemini
+				// Loaded cached credentials.
 				let filteredResult = resultBuffer;
 				if (this.toolType === 'gemini') {
 					filteredResult = filteredResult.replace(/^Loaded cached credentials\.\s*\n?/m, '');
+				}
+
+				// Apply filtering for Qwen
+				// Loaded cached Qwen credentials.
+				if (this.toolType === 'qwen') {
+					filteredResult = filteredResult.replace(/^Loaded cached Qwen credentials\.\s*\n?/m, '');
 				}
 				
 				// Update result display
@@ -629,25 +644,25 @@ class ToolView extends ItemView {
 		switch (this.toolType) {
 			case 'claude':
 				return {
-					command: `${this.plugin.settings.claudeCodePath} --allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch`,
+					command: `${this.plugin.settings.claudeCodePath} ${this.plugin.settings.claudeParams}`,
 					useStdin: true,
 					stdinContent: contextPrompt
 				};
 			case 'gemini':
 				return {
-					command: `${this.plugin.settings.geminiCliPath} --yolo`,
+					command: `${this.plugin.settings.geminiCliPath} ${this.plugin.settings.geminiParams}`,
 					useStdin: true,
 					stdinContent: contextPrompt
 				};
 			case 'codex':
 				return {
-					command: `${this.plugin.settings.codexPath}`,
+					command: `${this.plugin.settings.codexPath} ${this.plugin.settings.codexParams}`,
 					useStdin: true,
 					stdinContent: contextPrompt
 				};
 			case 'qwen':
 				return {
-					command: `${this.plugin.settings.qwenPath}`,
+					command: `${this.plugin.settings.qwenPath} ${this.plugin.settings.qwenParams}`,
 					useStdin: true,
 					stdinContent: contextPrompt
 				};
@@ -704,8 +719,11 @@ class ClaudeCodeGeminiSettingTab extends PluginSettingTab {
 
 		containerEl.createEl('h2', {text: 'AI Tools Settings'});
 
+		// Claude Code Settings
+		containerEl.createEl('h3', {text: 'Claude Code'});
+
 		new Setting(containerEl)
-			.setName('Claude Code Path')
+			.setName('CLI Path')
 			.setDesc('Path to the Claude Code CLI executable')
 			.addText(text => text
 				.setPlaceholder('claude')
@@ -726,7 +744,21 @@ class ClaudeCodeGeminiSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Gemini CLI Path')
+			.setName('Parameters')
+			.setDesc('Command line parameters and flags for Claude Code CLI')
+			.addText(text => text
+				.setPlaceholder('--allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch')
+				.setValue(this.plugin.settings.claudeParams)
+				.onChange(async (value) => {
+					this.plugin.settings.claudeParams = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Gemini CLI Settings
+		containerEl.createEl('h3', {text: 'Gemini CLI'});
+
+		new Setting(containerEl)
+			.setName('CLI Path')
 			.setDesc('Path to the Gemini CLI executable')
 			.addText(text => text
 				.setPlaceholder('gemini')
@@ -747,7 +779,21 @@ class ClaudeCodeGeminiSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('OpenAI Codex Path')
+			.setName('Parameters')
+			.setDesc('Command line parameters and flags for Gemini CLI')
+			.addText(text => text
+				.setPlaceholder('--yolo')
+				.setValue(this.plugin.settings.geminiParams)
+				.onChange(async (value) => {
+					this.plugin.settings.geminiParams = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// OpenAI Codex Settings
+		containerEl.createEl('h3', {text: 'OpenAI Codex'});
+
+		new Setting(containerEl)
+			.setName('CLI Path')
 			.setDesc('Path to the OpenAI Codex CLI executable')
 			.addText(text => text
 				.setPlaceholder('codex')
@@ -768,7 +814,21 @@ class ClaudeCodeGeminiSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Qwen Code Path')
+			.setName('Parameters')
+			.setDesc('Command line parameters and flags for OpenAI Codex CLI')
+			.addText(text => text
+				.setPlaceholder('workspace-write --ask-for-approval never')
+				.setValue(this.plugin.settings.codexParams)
+				.onChange(async (value) => {
+					this.plugin.settings.codexParams = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Qwen Code Settings
+		containerEl.createEl('h3', {text: 'Qwen Code'});
+
+		new Setting(containerEl)
+			.setName('CLI Path')
 			.setDesc('Path to the Qwen Code CLI executable')
 			.addText(text => text
 				.setPlaceholder('qwen')
@@ -786,6 +846,17 @@ class ClaudeCodeGeminiSettingTab extends PluginSettingTab {
 					} catch (error) {
 						new Notice('Qwen Code CLI not found or not working. Check the path.');
 					}
+				}));
+
+		new Setting(containerEl)
+			.setName('Parameters')
+			.setDesc('Command line parameters and flags for Qwen Code CLI')
+			.addText(text => text
+				.setPlaceholder('--yolo')
+				.setValue(this.plugin.settings.qwenParams)
+				.onChange(async (value) => {
+					this.plugin.settings.qwenParams = value;
+					await this.plugin.saveSettings();
 				}));
 
 		containerEl.createEl('p', {
