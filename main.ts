@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, ItemView, WorkspaceLeaf, TFile, addIcon } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, ItemView, WorkspaceLeaf, TFile, addIcon, MarkdownRenderer, Component } from 'obsidian';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { writeFileSync, unlinkSync } from 'fs';
@@ -410,7 +410,18 @@ class ToolView extends ItemView {
 				border: 1px solid var(--background-modifier-border);
 				border-radius: 4px;
 			}
-			.result-text, .execution-text {
+			.result-text {
+				background: var(--background-primary-alt);
+				padding: 10px;
+				border-radius: 4px;
+				max-height: 600px;
+				overflow-y: auto;
+				user-select: text;
+				-webkit-user-select: text;
+				-moz-user-select: text;
+				-ms-user-select: text;
+			}
+			.execution-text {
 				font-family: var(--font-monospace);
 				white-space: pre-wrap;
 				background: var(--background-primary-alt);
@@ -437,6 +448,20 @@ class ToolView extends ItemView {
 			}
 		`;
 		document.head.appendChild(style);
+	}
+
+	async renderMarkdown(content: string): Promise<void> {
+		// Clear previous content
+		this.resultDiv.empty();
+		
+		// Create a component for the markdown renderer
+		const component = new Component();
+		
+		// Render the markdown content
+		await MarkdownRenderer.renderMarkdown(content, this.resultDiv, '', component);
+		
+		// Auto-scroll to bottom
+		this.resultDiv.scrollTop = this.resultDiv.scrollHeight;
 	}
 
 	updateContext() {
@@ -497,7 +522,7 @@ class ToolView extends ItemView {
 		this.runButton.textContent = 'Running...';
 		this.cancelButton.style.display = 'inline-block';
 		
-		this.resultDiv.textContent = 'Processing prompt...';
+		await this.renderMarkdown('*Processing prompt...*');
 		this.executionDiv.textContent = '';
 
 		try {
@@ -519,7 +544,7 @@ class ToolView extends ItemView {
 			await this.runCommandWithSpawn(commandInfo.command, vaultPath, commandInfo.stdinContent);
 			
 		} catch (error) {
-			this.resultDiv.textContent = `Error: ${error.message}`;
+			await this.renderMarkdown(`**Error:** ${error.message}`);
 			this.executionDiv.textContent += `\nError: ${error.message}`;
 			if (error.message.includes('ENOENT')) {
 				new Notice('CLI tool not found. Check the path in settings.');
@@ -562,7 +587,7 @@ class ToolView extends ItemView {
 			let isFirstOutput = true;
 
 
-			this.currentProcess.stdout?.on('data', (data: Buffer) => {
+			this.currentProcess.stdout?.on('data', async (data: Buffer) => {
 				const output = data.toString();
 				fullOutput += output;
 				
@@ -586,9 +611,8 @@ class ToolView extends ItemView {
 					filteredResult = filteredResult.replace(/^Loaded cached Qwen credentials\.\s*\n?/m, '');
 				}
 				
-				// Update result display
-				this.resultDiv.textContent = filteredResult;
-				this.resultDiv.scrollTop = this.resultDiv.scrollHeight;
+				// Update result display with markdown rendering
+				await this.renderMarkdown(filteredResult);
 			});
 
 			this.currentProcess.stderr?.on('data', (data: Buffer) => {
@@ -597,13 +621,13 @@ class ToolView extends ItemView {
 				this.executionDiv.scrollTop = this.executionDiv.scrollHeight;
 			});
 
-			this.currentProcess.on('close', (code: number, signal: string) => {
+			this.currentProcess.on('close', async (code: number, signal: string) => {
 				if (code === 0) {
 					this.executionDiv.textContent += '\n\nCommand completed successfully.';
 					resolve();
 				} else if (signal === 'SIGTERM' || signal === 'SIGKILL') {
 					this.executionDiv.textContent += '\n\nCommand was cancelled.';
-					this.resultDiv.textContent = 'Command was cancelled.';
+					await this.renderMarkdown('*Command was cancelled.*');
 					reject(new Error('Command was cancelled'));
 				} else {
 					this.executionDiv.textContent += `\n\nCommand failed with exit code ${code}`;
