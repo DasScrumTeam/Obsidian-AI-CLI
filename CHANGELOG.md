@@ -22,30 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.3] - 2025-08-16
 
 ### Added
+- PowerShell-based release automation script
+- `/new_release` command for Claude Code integration
+- Automated GitHub release creation with changelog extraction
 
 ### Changed
-
-### Deprecated
-
-### Removed
+- Release process now fully automated including version updates, builds, and GitHub releases
 
 ### Fixed
-
-### Security
-
-## [1.0.3] - 2025-08-16
-
-### Added
-
-### Changed
-
-### Deprecated
-
-### Removed
-
-### Fixed
-
-### Security
+- Git tag naming convention (removed 'v' prefix to match Obsidian plugin standards)
 
 ## [1.0.2] - 2025-08-16
 
