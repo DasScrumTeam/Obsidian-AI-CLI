@@ -11,6 +11,12 @@ An Obsidian plugin that integrates Claude Code and Gemini CLI tools directly int
 - **Real-time Streaming**: See AI responses as they're generated
 - **Custom Icons**: Distinctive Claude and Gemini icons in the sidebar
 
+## Donate
+
+If you find this plugin helpful, consider supporting its development:
+
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://paypal.me/blackdragonbe)
+
 ## Prerequisites
 
 Before using this plugin, you need to have the CLI tools installed:

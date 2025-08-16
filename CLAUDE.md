@@ -23,7 +23,7 @@ This is an Obsidian plugin that integrates Claude Code and Gemini CLI tools dire
 
 **Unified Tool Implementation**: Both Claude Code and Gemini CLI share the same `ToolView` class implementation. The `toolType: 'claude' | 'gemini'` parameter determines:
 - Command construction format in `buildCommand()`
-- Timeout values (3min for Claude, 1min for Gemini)
+- Timeout of 1 minute to wait for the AI to respond
 - Tool-specific CLI arguments
 
 **Context Detection Strategy**: The plugin uses multiple fallback methods to detect active files and selections:

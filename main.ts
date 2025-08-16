@@ -477,7 +477,7 @@ class ToolView extends ItemView {
 
 	async runCommandWithSpawn(command: string, cwd: string, stdinContent?: string): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const timeout = this.toolType === 'claude' ? 180000 : 60000;
+			const timeout = 60000;
 			
 			this.currentProcess = spawn(command, [], { 
 				cwd,
