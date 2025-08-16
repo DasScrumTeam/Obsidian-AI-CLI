@@ -20,6 +20,8 @@ When updating the plugin, make sure to update the version number in the followin
 - `versions.json`
 - `package.json`
 
+Also update the `CHANGELOG.md` file.
+
 ## Architecture
 
 ### Core Plugin Structure

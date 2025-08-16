@@ -19,7 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-## [1.1.0] - 2025-08-16
+## [1.0.2] - 2025-08-16
+
+### Changed
+- **BREAKING**: Renamed project from "Claude Code + Gemini CLI" to "Obsidian AI CLI"
+- Updated plugin ID from "claude-code-gemini-cli" to "obsidian-ai-cli"
+- Updated all class names and interfaces to use "ObsidianAICli" prefix
+- Updated documentation and README to reflect new project name
+
+## [1.0.1] - 2025-08-16
 
 ### Added
 - Comprehensive prompt content display in execution logs
