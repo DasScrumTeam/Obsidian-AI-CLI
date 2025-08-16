@@ -1,4 +1,4 @@
-# Obsidian AI Tools Plugin
+# Obsidian AI CLI
 
 An Obsidian plugin that integrates multiple AI CLI tools directly into your workspace. Execute AI commands through convenient sidebar panels while automatically passing file context and selected text.
 
@@ -54,16 +54,16 @@ Before using this plugin, you need to have the CLI tools installed:
 1. Clone or download this repository
 2. Copy the plugin folder to your Obsidian vault's plugins directory:
    ```
-   YourVault/.obsidian/plugins/Obsidian-Claude-Code-Gemini-CLI/
+   YourVault/.obsidian/plugins/Obsidian-AI-CLI/
    ```
 3. Navigate to the plugin directory and build:
    ```bash
-   cd YourVault/.obsidian/plugins/Obsidian-Claude-Code-Gemini-CLI/
+   cd YourVault/.obsidian/plugins/Obsidian-AI-CLI/
    npm install
    npm run build
    ```
 4. In Obsidian, go to Settings → Community Plugins
-5. Enable "Obsidian AI Tools"
+5. Enable "Obsidian AI CLI"
 
 ### Option 2: BRAT Installation (Recommended for regular use)
 
@@ -75,7 +75,7 @@ Before using this plugin, you need to have the CLI tools installed:
 
 ### 1. Configure CLI Paths
 
-1. Go to Settings → Community Plugins → Obsidian AI Tools → Options
+1. Go to Settings → Community Plugins → Obsidian AI CLI → Options
 2. Set the paths for your CLI tools:
    - **Claude Code Path**: Usually `claude` (if in PATH) or full path to executable
    - **Gemini CLI Path**: Usually `gemini` (if in PATH) or full path to executable
@@ -172,7 +172,7 @@ This is automatically filtered out in the Result section but remains visible in 
 
 ### File Structure
 ```
-.obsidian/plugins/Obsidian-Claude-Code-Gemini-CLI/
+.obsidian/plugins/Obsidian-AI-CLI/
 ├── main.ts          # Main plugin code
 ├── manifest.json    # Plugin metadata
 ├── versions.json    # Version history

@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-08-15
 
 ### Added
-- Obsidian plugin integrating Claude Code and Gemini CLI tools
+- Obsidian plugin integrating multiple AI CLI tools (Claude Code, Gemini CLI, OpenAI Codex, and Qwen Code)
 - Unified sidebar panels for both AI tools
 - Automatic file context detection and passing
 - Selected text context support

@@ -23,9 +23,9 @@ When updating the plugin, make sure to update the version number in the followin
 ## Architecture
 
 ### Core Plugin Structure
-- **Main Plugin Class**: `ClaudeCodeGeminiPlugin` - Manages plugin lifecycle, settings, and view registration
+- **Main Plugin Class**: `ObsidianAICliPlugin` - Manages plugin lifecycle, settings, and view registration
 - **Unified View System**: Single `ToolView` class handles all AI tool interfaces using a `toolType` parameter
-- **Settings Management**: `ClaudeCodeGeminiSettings` interface with CLI tool paths for all supported tools
+- **Settings Management**: `ObsidianAICliSettings` interface with CLI tool paths for all supported tools
 
 ### Key Design Patterns
 

@@ -6,7 +6,7 @@ import { join } from 'path';
 
 const execAsync = promisify(exec);
 
-interface ClaudeCodeGeminiSettings {
+interface ObsidianAICliSettings {
 	claudeCodePath: string;
 	geminiCliPath: string;
 	codexPath: string;
@@ -17,7 +17,7 @@ interface ClaudeCodeGeminiSettings {
 	qwenParams: string;
 }
 
-const DEFAULT_SETTINGS: ClaudeCodeGeminiSettings = {
+const DEFAULT_SETTINGS: ObsidianAICliSettings = {
 	claudeCodePath: 'claude',
 	geminiCliPath: 'gemini',
 	codexPath: 'codex',
@@ -33,8 +33,8 @@ const GEMINI_VIEW_TYPE = 'gemini-cli-view';
 const CODEX_VIEW_TYPE = 'codex-view';
 const QWEN_VIEW_TYPE = 'qwen-view';
 
-export default class ClaudeCodeGeminiPlugin extends Plugin {
-	settings: ClaudeCodeGeminiSettings;
+export default class ObsidianAICliPlugin extends Plugin {
+	settings: ObsidianAICliSettings;
 
 	async onload() {
 		await this.loadSettings();
@@ -105,7 +105,7 @@ export default class ClaudeCodeGeminiPlugin extends Plugin {
 			}
 		});
 
-		this.addSettingTab(new ClaudeCodeGeminiSettingTab(this.app, this));
+		this.addSettingTab(new ObsidianAICliSettingTab(this.app, this));
 	}
 
 	async activateView(viewType: string) {
@@ -236,7 +236,7 @@ export default class ClaudeCodeGeminiPlugin extends Plugin {
 }
 
 class ToolView extends ItemView {
-	plugin: ClaudeCodeGeminiPlugin;
+	plugin: ObsidianAICliPlugin;
 	toolType: 'claude' | 'gemini' | 'codex' | 'qwen';
 	promptInput: HTMLTextAreaElement;
 	runButton: HTMLButtonElement;
@@ -249,7 +249,7 @@ class ToolView extends ItemView {
 	currentProcess: any = null;
 	private eventRefs: any[] = [];
 
-	constructor(leaf: WorkspaceLeaf, plugin: ClaudeCodeGeminiPlugin, toolType: 'claude' | 'gemini' | 'codex' | 'qwen') {
+	constructor(leaf: WorkspaceLeaf, plugin: ObsidianAICliPlugin, toolType: 'claude' | 'gemini' | 'codex' | 'qwen') {
 		super(leaf);
 		this.plugin = plugin;
 		this.toolType = toolType;
@@ -704,10 +704,10 @@ class ToolView extends ItemView {
 	}
 }
 
-class ClaudeCodeGeminiSettingTab extends PluginSettingTab {
-	plugin: ClaudeCodeGeminiPlugin;
+class ObsidianAICliSettingTab extends PluginSettingTab {
+	plugin: ObsidianAICliPlugin;
 
-	constructor(app: App, plugin: ClaudeCodeGeminiPlugin) {
+	constructor(app: App, plugin: ObsidianAICliPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}

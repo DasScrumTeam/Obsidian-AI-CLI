@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-claude-code-gemini-cli",
+	"name": "obsidian-ai-cli",
 	"version": "1.0.1",
-	"description": "Obsidian plugin for Claude Code and Gemini CLI integration",
+	"description": "Obsidian plugin for multiple AI CLI tools integration (Claude Code, Gemini CLI, OpenAI Codex, and Qwen Code)",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",

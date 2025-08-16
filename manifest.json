@@ -1,9 +1,9 @@
 {
-	"id": "claude-code-gemini-cli",
-	"name": "Claude Code + Gemini CLI",
+	"id": "obsidian-ai-cli",
+	"name": "Obsidian AI CLI",
 	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
-	"description": "Integrate Claude Code and Gemini CLI to edit and create notes in your vault.",
+	"description": "Integrate multiple AI CLI tools (Claude Code, Gemini CLI, OpenAI Codex, and Qwen Code) to edit and create notes in your vault.",
 	"author": "BlackDragonBE",
 	"authorUrl": "https://github.com/BlackDragonBE",
 	"fundingUrl": "https://paypal.me/blackdragonbe",
