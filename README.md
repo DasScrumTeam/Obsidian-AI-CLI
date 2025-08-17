@@ -2,6 +2,8 @@
 
 An Obsidian plugin that integrates multiple AI CLI tools directly into your workspace. Execute AI commands through convenient sidebar panels while automatically passing file context and selected text.
 
+![Example 1](images/example1.gif)
+
 **Supported AI Tools:**
 - Claude Code CLI
 - Gemini CLI
@@ -96,6 +98,8 @@ Or use the sidebar icons that appear after enabling the plugin.
 ## Usage
 
 ### Basic Usage
+
+![Example 2](images/example2.gif)
 
 1. **Open a file** and/or **select text** you want to work with
 2. **Open a sidebar panel** (Claude Code, Gemini CLI, OpenAI Codex, or Qwen Code)
