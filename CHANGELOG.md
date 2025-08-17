@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [1.0.4] - 2025-08-17
+
+### Added
+- Line number range support for text selections
+- Enhanced context display showing line ranges in UI (e.g., "lines 5-7")
+
+### Changed
+- Context JSON format now includes `lineRange: {start: number, end: number}` when text is selected
+- Updated documentation to reflect new context format with line range examples
+
 ## [1.0.3] - 2025-08-16
 
 ### Added
