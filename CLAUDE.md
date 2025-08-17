@@ -51,8 +51,8 @@ Also update the `CHANGELOG.md` file.
 
 The plugin passes context to CLI tools using:
 - File references: `@file_path` syntax (e.g., `@document.md`)
-- Selected text: Single-line JSON format `Context: {"selectedText":"..."}`
-- Example: `"Translate to French @document.md Context: {"selectedText":"Hello world"}"`
+- Selected text: Single-line JSON format `Context: {"selectedText":"...", "lineRange": {"start": N, "end": N}}`
+- Example: `"Translate to French @document.md Context: {"selectedText":"Hello world", "lineRange": {"start": 5, "end": 7}}"`
 - **Delivery Method**: All prompts sent via stdin to avoid shell escaping issues
 - **Consistency**: All supported AI tools use identical stdin-based approach
 

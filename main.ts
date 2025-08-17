@@ -143,10 +143,11 @@ export default class ObsidianAICliPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	getCurrentContext(): { file: TFile | null, selection: string, debug: string } {
+	getCurrentContext(): { file: TFile | null, selection: string, lineRange: { start: number, end: number } | null, debug: string } {
 		let debugInfo = '';
 		let file = null;
 		let selection = '';
+		let lineRange: { start: number, end: number } | null = null;
 
 		// Method 1: Try getActiveFile() (most reliable)
 		file = this.app.workspace.getActiveFile();
@@ -197,6 +198,20 @@ export default class ObsidianAICliPlugin extends Plugin {
 				debugInfo += `Selection length: ${selection.length}\n`;
 				if (selection.length > 0) {
 					debugInfo += `Selection preview: "${selection.substring(0, 50)}${selection.length > 50 ? '...' : ''}"\n`;
+					
+					// Get line range for selection
+					const selectionRange = activeView.editor.listSelections()[0];
+					if (selectionRange) {
+						lineRange = {
+							start: selectionRange.anchor.line + 1, // Convert to 1-based line numbers
+							end: selectionRange.head.line + 1
+						};
+						// Ensure start is always less than or equal to end
+						if (lineRange.start > lineRange.end) {
+							[lineRange.start, lineRange.end] = [lineRange.end, lineRange.start];
+						}
+						debugInfo += `Line range: ${lineRange.start}-${lineRange.end}\n`;
+					}
 				}
 			} else {
 				debugInfo += `No editor found on activeView\n`;
@@ -205,7 +220,7 @@ export default class ObsidianAICliPlugin extends Plugin {
 			debugInfo += `No MarkdownView found\n`;
 		}
 
-		return { file, selection, debug: debugInfo };
+		return { file, selection, lineRange, debug: debugInfo };
 	}
 
 	async expandFileReferences(prompt: string): Promise<string> {
@@ -465,7 +480,7 @@ class ToolView extends ItemView {
 	}
 
 	updateContext() {
-		const { file, selection, debug } = this.plugin.getCurrentContext();
+		const { file, selection, lineRange, debug } = this.plugin.getCurrentContext();
 		
 		// Clear existing context content but keep the header
 		const existingContent = this.contextDiv.querySelector('.context-content');
@@ -489,8 +504,9 @@ class ToolView extends ItemView {
 		
 		if (selection && selection.trim()) {
 			const truncated = selection.length > 100 ? selection.substring(0, 100) + '...' : selection;
+			const lineRangeText = lineRange ? ` (lines ${lineRange.start}-${lineRange.end})` : '';
 			contentDiv.createEl("p", { 
-				text: `✏️ Selected: "${truncated}"`,
+				text: `✏️ Selected: "${truncated}"${lineRangeText}`,
 				cls: "context-selection"
 			});
 		} else {
@@ -650,7 +666,7 @@ class ToolView extends ItemView {
 	}
 
 	buildCommand(prompt: string): { command: string, useStdin: boolean, stdinContent: string } {
-		const { file, selection } = this.plugin.getCurrentContext();
+		const { file, selection, lineRange } = this.plugin.getCurrentContext();
 		let contextPrompt = prompt;
 		
 		// Add file reference using @file_path syntax (both tools support this)
@@ -660,7 +676,13 @@ class ToolView extends ItemView {
 		
 		// Add selection as compact JSON context if available
 		if (selection && selection.trim()) {
-			const contextJson = JSON.stringify({ selectedText: selection });
+			const contextData: { selectedText: string, lineRange?: { start: number, end: number } } = { 
+				selectedText: selection 
+			};
+			if (lineRange) {
+				contextData.lineRange = lineRange;
+			}
+			const contextJson = JSON.stringify(contextData);
 			contextPrompt += ` Context: ${contextJson}`;
 		}
 
