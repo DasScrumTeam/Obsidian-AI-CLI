@@ -1,6 +1,6 @@
 {
     "name":  "obsidian-ai-cli",
-    "version":  "1.0.4",
+    "version":  "1.0.5",
     "description":  "Obsidian plugin for multiple AI CLI tools integration (Claude Code, Gemini CLI, OpenAI Codex, and Qwen Code)",
     "main":  "main.js",
     "scripts":  {

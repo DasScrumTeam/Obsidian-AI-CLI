@@ -19,6 +19,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [1.0.5] - 2025-08-17
+
+### Added
+- File path autocomplete when typing `@` symbol in prompt input
+- Smart file filtering with filename prioritization
+- Keyboard navigation (Arrow keys, Enter/Tab, Escape) for autocomplete dropdown
+- Collapsible "Tips and examples" section in the UI
+- File cache system with automatic invalidation on vault changes
+- Debounced search to improve performance with large vaults
+
+### Changed
+- Run button now takes full width of the container
+- Tips section is now collapsible and renamed to "Tips and examples"
+- Improved example prompts with file reference syntax explanation
+- Enhanced UI responsiveness for large vault scenarios
+
+### Fixed
+- Performance issues with large vaults (10,000+ files) through caching and optimized search
+- Memory usage optimization for file path autocomplete
+
 ## [1.0.4] - 2025-08-17
 
 ### Added
