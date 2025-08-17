@@ -328,7 +328,7 @@ class ToolView extends ItemView {
 		• "Create a note named "todo-list". Use dataviewjs to list all the notes with the #todo tag in this vault."<br>
 		• "Give me 5 suggestions to make this character more interesting"<br>
 		• "Summarize this PDF in a new note"<br>
-		• "Add comments to explain this code"`;
+		• "Make the style of this note the same as @other_note.md"`;
 		
 		this.promptInput = promptContainer.createEl("textarea", {
 			cls: "prompt-input",
