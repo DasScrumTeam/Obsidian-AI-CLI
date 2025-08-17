@@ -313,11 +313,22 @@ class ToolView extends ItemView {
 		const promptContainer = container.createDiv("prompt-container");
 		promptContainer.createEl("label", { text: "Prompt:" });
 		
-		// Add help text
-		const helpText = promptContainer.createEl("div", {
-			cls: "help-text",
-			text: "💡 Tip: Open a file and/or select text for automatic context. Try: 'Translate the selected text to French' or 'Fix grammar in this file'"
+		// Add collapsible help text
+		const helpDetails = promptContainer.createEl("details", { cls: "help-details" });
+		helpDetails.createEl("summary", { text: "💡 Tips and examples" });
+		const helpText = helpDetails.createEl("div", {
+			cls: "help-text"
 		});
+		helpText.innerHTML = `Open a file (markdown, text, image, pdf) and optionally select text for automatic context. Click the "Run" button to execute the prompt.<br><br>
+		<strong>Example prompts:</strong><br>
+		• "Translate the selected text to French"<br>
+		• "Fix grammar in this note"<br>
+		• "Summarize the main points and add them to a new Summary header at the top of the file"<br>
+		• "This image is a character sheet, create a new note with the full character information"<br>
+		• "Create a note named "todo-list". Use dataviewjs to list all the notes with the #todo tag in this vault."<br>
+		• "Give me 5 suggestions to make this character more interesting"<br>
+		• "Summarize this PDF in a new note"<br>
+		• "Add comments to explain this code"`;
 		
 		this.promptInput = promptContainer.createEl("textarea", {
 			cls: "prompt-input",
@@ -379,6 +390,18 @@ class ToolView extends ItemView {
 		const style = document.createElement('style');
 		style.textContent = `
 			.prompt-container { margin: 10px 0; }
+			.help-details {
+				margin: 5px 0;
+			}
+			.help-details summary {
+				cursor: pointer;
+				font-size: 0.9em;
+				color: var(--interactive-accent);
+				margin-bottom: 5px;
+			}
+			.help-details summary:hover {
+				color: var(--interactive-accent-hover);
+			}
 			.help-text {
 				font-size: 0.9em;
 				color: var(--text-muted);
@@ -410,6 +433,7 @@ class ToolView extends ItemView {
 			.run-button {
 				background: var(--interactive-accent);
 				color: var(--text-on-accent);
+				flex: 1;
 			}
 			.cancel-button {
 				background: var(--text-error);
