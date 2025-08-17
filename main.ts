@@ -263,6 +263,9 @@ class ToolView extends ItemView {
 	isRunning: boolean = false;
 	currentProcess: any = null;
 	private eventRefs: any[] = [];
+	private autocompleteEl: HTMLDivElement | null = null;
+	private currentAutocompleteItems: string[] = [];
+	private selectedAutocompleteIndex: number = -1;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ObsidianAICliPlugin, toolType: 'claude' | 'gemini' | 'codex' | 'qwen') {
 		super(leaf);
@@ -341,6 +344,20 @@ class ToolView extends ItemView {
 		// Update context when user focuses on the prompt input
 		this.promptInput.addEventListener('focus', () => {
 			this.updateContext();
+		});
+
+		// Add autocomplete functionality
+		this.promptInput.addEventListener('input', (e) => {
+			this.handleAutocomplete(e);
+		});
+
+		this.promptInput.addEventListener('keydown', (e) => {
+			this.handleAutocompleteKeydown(e);
+		});
+
+		this.promptInput.addEventListener('blur', () => {
+			// Hide autocomplete after a short delay to allow for clicks
+			setTimeout(() => this.hideAutocomplete(), 200);
 		});
 
 		// Register workspace change listeners
@@ -485,6 +502,34 @@ class ToolView extends ItemView {
 				border-radius: 3px;
 				border-left: 2px solid var(--interactive-accent);
 			}
+			.file-autocomplete {
+				background: var(--background-primary);
+				border: 1px solid var(--background-modifier-border);
+				border-radius: 4px;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+				max-height: 200px;
+				overflow-y: auto;
+				z-index: 1000;
+				font-size: 0.9em;
+			}
+			.autocomplete-item {
+				padding: 8px 12px;
+				cursor: pointer;
+				border-bottom: 1px solid var(--background-modifier-border);
+				color: var(--text-normal);
+			}
+			.autocomplete-item:last-child {
+				border-bottom: none;
+			}
+			.autocomplete-item:hover,
+			.autocomplete-item.selected {
+				background: var(--background-modifier-hover);
+				color: var(--text-accent);
+			}
+			.autocomplete-item.selected {
+				background: var(--interactive-accent);
+				color: var(--text-on-accent);
+			}
 		`;
 		document.head.appendChild(style);
 	}
@@ -501,6 +546,156 @@ class ToolView extends ItemView {
 		
 		// Auto-scroll to bottom
 		this.resultDiv.scrollTop = this.resultDiv.scrollHeight;
+	}
+
+	handleAutocomplete(e: Event) {
+		const input = e.target as HTMLTextAreaElement;
+		const cursorPos = input.selectionStart;
+		const text = input.value;
+		
+		// Find the last @ symbol before cursor
+		let atIndex = -1;
+		for (let i = cursorPos - 1; i >= 0; i--) {
+			if (text[i] === '@') {
+				atIndex = i;
+				break;
+			}
+			if (text[i] === ' ' || text[i] === '\n') {
+				break; // Stop at whitespace
+			}
+		}
+		
+		if (atIndex !== -1) {
+			const searchTerm = text.substring(atIndex + 1, cursorPos);
+			this.showAutocomplete(searchTerm, atIndex);
+		} else {
+			this.hideAutocomplete();
+		}
+	}
+
+	handleAutocompleteKeydown(e: KeyboardEvent) {
+		if (!this.autocompleteEl || this.autocompleteEl.style.display === 'none') {
+			return;
+		}
+
+		switch (e.key) {
+			case 'ArrowDown':
+				e.preventDefault();
+				this.selectedAutocompleteIndex = Math.min(
+					this.selectedAutocompleteIndex + 1,
+					this.currentAutocompleteItems.length - 1
+				);
+				this.updateAutocompleteSelection();
+				break;
+			case 'ArrowUp':
+				e.preventDefault();
+				this.selectedAutocompleteIndex = Math.max(this.selectedAutocompleteIndex - 1, -1);
+				this.updateAutocompleteSelection();
+				break;
+			case 'Enter':
+			case 'Tab':
+				if (this.selectedAutocompleteIndex >= 0) {
+					e.preventDefault();
+					this.selectAutocompleteItem(this.currentAutocompleteItems[this.selectedAutocompleteIndex]);
+				}
+				break;
+			case 'Escape':
+				this.hideAutocomplete();
+				break;
+		}
+	}
+
+	showAutocomplete(searchTerm: string, atIndex: number) {
+		// Get all files in the vault
+		const files = this.plugin.app.vault.getFiles();
+		const filteredFiles = files
+			.filter(file => file.path.toLowerCase().includes(searchTerm.toLowerCase()))
+			.slice(0, 10) // Limit to 10 items
+			.map(file => file.path);
+
+		if (filteredFiles.length === 0) {
+			this.hideAutocomplete();
+			return;
+		}
+
+		this.currentAutocompleteItems = filteredFiles;
+		this.selectedAutocompleteIndex = -1;
+
+		if (!this.autocompleteEl) {
+			this.autocompleteEl = document.createElement('div');
+			this.autocompleteEl.className = 'file-autocomplete';
+			document.body.appendChild(this.autocompleteEl);
+		}
+
+		// Position the autocomplete dropdown
+		const rect = this.promptInput.getBoundingClientRect();
+		this.autocompleteEl.style.position = 'fixed';
+		this.autocompleteEl.style.left = rect.left + 'px';
+		this.autocompleteEl.style.top = (rect.bottom + 2) + 'px';
+		this.autocompleteEl.style.width = rect.width + 'px';
+		this.autocompleteEl.style.display = 'block';
+
+		// Populate the dropdown
+		this.autocompleteEl.innerHTML = '';
+		filteredFiles.forEach((filePath, index) => {
+			const item = document.createElement('div');
+			item.className = 'autocomplete-item';
+			item.textContent = filePath;
+			item.addEventListener('click', () => {
+				this.selectAutocompleteItem(filePath);
+			});
+			this.autocompleteEl!.appendChild(item);
+		});
+	}
+
+	hideAutocomplete() {
+		if (this.autocompleteEl) {
+			this.autocompleteEl.style.display = 'none';
+		}
+		this.selectedAutocompleteIndex = -1;
+	}
+
+	updateAutocompleteSelection() {
+		if (!this.autocompleteEl) return;
+
+		const items = this.autocompleteEl.querySelectorAll('.autocomplete-item');
+		items.forEach((item, index) => {
+			if (index === this.selectedAutocompleteIndex) {
+				item.classList.add('selected');
+			} else {
+				item.classList.remove('selected');
+			}
+		});
+	}
+
+	selectAutocompleteItem(filePath: string) {
+		const cursorPos = this.promptInput.selectionStart;
+		const text = this.promptInput.value;
+		
+		// Find the @ symbol before cursor
+		let atIndex = -1;
+		for (let i = cursorPos - 1; i >= 0; i--) {
+			if (text[i] === '@') {
+				atIndex = i;
+				break;
+			}
+			if (text[i] === ' ' || text[i] === '\n') {
+				break;
+			}
+		}
+		
+		if (atIndex !== -1) {
+			// Replace the partial path with the selected file path
+			const newText = text.substring(0, atIndex + 1) + filePath + text.substring(cursorPos);
+			this.promptInput.value = newText;
+			
+			// Set cursor position after the inserted file path
+			const newCursorPos = atIndex + 1 + filePath.length;
+			this.promptInput.setSelectionRange(newCursorPos, newCursorPos);
+			this.promptInput.focus();
+		}
+		
+		this.hideAutocomplete();
 	}
 
 	updateContext() {
@@ -766,6 +961,12 @@ class ToolView extends ItemView {
 			}
 		});
 		this.eventRefs = [];
+		
+		// Clean up autocomplete element
+		if (this.autocompleteEl) {
+			this.autocompleteEl.remove();
+			this.autocompleteEl = null;
+		}
 		
 		// Clean up any running process
 		if (this.currentProcess && !this.currentProcess.killed) {
