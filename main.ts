@@ -266,6 +266,8 @@ class ToolView extends ItemView {
 	private autocompleteEl: HTMLDivElement | null = null;
 	private currentAutocompleteItems: string[] = [];
 	private selectedAutocompleteIndex: number = -1;
+	private cachedFiles: string[] = [];
+	private autocompleteDebounceTimer: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: ObsidianAICliPlugin, toolType: 'claude' | 'gemini' | 'codex' | 'qwen') {
 		super(leaf);
@@ -322,7 +324,9 @@ class ToolView extends ItemView {
 		const helpText = helpDetails.createEl("div", {
 			cls: "help-text"
 		});
-		helpText.innerHTML = `Open a file (markdown, text, image, pdf) and optionally select text for automatic context. Click the "Run" button to execute the prompt.<br><br>
+		helpText.innerHTML = `Open a file (markdown, text, image, pdf) and optionally select text for automatic context. Click the "Run" button to execute the prompt.<br>
+		You can use @file_path to reference other files in your vault. For example, "@other_note.md" or "@subfolder/other_note.md".<br>
+		<br><br>
 		<strong>Example prompts:</strong><br>
 		• "Translate the selected text to French"<br>
 		• "Fix grammar in this note"<br>
@@ -367,6 +371,19 @@ class ToolView extends ItemView {
 
 		this.registerEvent(this.plugin.app.workspace.on('file-open', () => {
 			this.updateContext();
+		}));
+
+		// Register vault change listeners for file cache invalidation
+		this.registerEvent(this.plugin.app.vault.on('create', () => {
+			this.invalidateFileCache();
+		}));
+
+		this.registerEvent(this.plugin.app.vault.on('delete', () => {
+			this.invalidateFileCache();
+		}));
+
+		this.registerEvent(this.plugin.app.vault.on('rename', () => {
+			this.invalidateFileCache();
 		}));
 
 		const buttonContainer = promptContainer.createDiv("button-container");
@@ -549,28 +566,37 @@ class ToolView extends ItemView {
 	}
 
 	handleAutocomplete(e: Event) {
-		const input = e.target as HTMLTextAreaElement;
-		const cursorPos = input.selectionStart;
-		const text = input.value;
-		
-		// Find the last @ symbol before cursor
-		let atIndex = -1;
-		for (let i = cursorPos - 1; i >= 0; i--) {
-			if (text[i] === '@') {
-				atIndex = i;
-				break;
-			}
-			if (text[i] === ' ' || text[i] === '\n') {
-				break; // Stop at whitespace
-			}
+		// Clear previous debounce timer
+		if (this.autocompleteDebounceTimer) {
+			clearTimeout(this.autocompleteDebounceTimer);
 		}
-		
-		if (atIndex !== -1) {
-			const searchTerm = text.substring(atIndex + 1, cursorPos);
-			this.showAutocomplete(searchTerm, atIndex);
-		} else {
-			this.hideAutocomplete();
-		}
+
+		// Debounce the autocomplete to avoid excessive processing
+		this.autocompleteDebounceTimer = window.setTimeout(() => {
+			const input = e.target as HTMLTextAreaElement;
+			const cursorPos = input.selectionStart;
+			const text = input.value;
+			
+			// Find the last @ symbol before cursor
+			let atIndex = -1;
+			for (let i = cursorPos - 1; i >= 0; i--) {
+				if (text[i] === '@') {
+					atIndex = i;
+					break;
+				}
+				if (text[i] === ' ' || text[i] === '\n') {
+					break; // Stop at whitespace
+				}
+			}
+			
+			if (atIndex !== -1) {
+				const searchTerm = text.substring(atIndex + 1, cursorPos);
+				// Only show autocomplete if search term is at least 0 characters (so it shows on @)
+				this.showAutocomplete(searchTerm, atIndex);
+			} else {
+				this.hideAutocomplete();
+			}
+		}, 150); // 150ms debounce delay
 	}
 
 	handleAutocompleteKeydown(e: KeyboardEvent) {
@@ -605,13 +631,52 @@ class ToolView extends ItemView {
 		}
 	}
 
+	invalidateFileCache() {
+		this.cachedFiles = [];
+	}
+
+	getFiles(): string[] {
+		// Use cached files if available
+		if (this.cachedFiles.length === 0) {
+			this.cachedFiles = this.plugin.app.vault.getFiles().map(file => file.path);
+		}
+		return this.cachedFiles;
+	}
+
 	showAutocomplete(searchTerm: string, atIndex: number) {
-		// Get all files in the vault
-		const files = this.plugin.app.vault.getFiles();
-		const filteredFiles = files
-			.filter(file => file.path.toLowerCase().includes(searchTerm.toLowerCase()))
-			.slice(0, 10) // Limit to 10 items
-			.map(file => file.path);
+		// Skip very short search terms to avoid showing too many results
+		if (searchTerm.length === 0 && this.getFiles().length > 50) {
+			this.hideAutocomplete();
+			return;
+		}
+
+		// Get cached files
+		const allFiles = this.getFiles();
+		
+		// Optimized search with early termination
+		const searchTermLower = searchTerm.toLowerCase();
+		const filteredFiles: string[] = [];
+		const maxResults = 10;
+		
+		// First pass: exact matches at start of filename
+		for (const filePath of allFiles) {
+			if (filteredFiles.length >= maxResults) break;
+			const fileName = filePath.split('/').pop()?.toLowerCase() || '';
+			if (fileName.startsWith(searchTermLower)) {
+				filteredFiles.push(filePath);
+			}
+		}
+		
+		// Second pass: partial matches if we need more results
+		if (filteredFiles.length < maxResults && searchTerm.length > 0) {
+			for (const filePath of allFiles) {
+				if (filteredFiles.length >= maxResults) break;
+				if (!filteredFiles.includes(filePath) && 
+					filePath.toLowerCase().includes(searchTermLower)) {
+					filteredFiles.push(filePath);
+				}
+			}
+		}
 
 		if (filteredFiles.length === 0) {
 			this.hideAutocomplete();
@@ -961,6 +1026,12 @@ class ToolView extends ItemView {
 			}
 		});
 		this.eventRefs = [];
+		
+		// Clean up debounce timer
+		if (this.autocompleteDebounceTimer) {
+			clearTimeout(this.autocompleteDebounceTimer);
+			this.autocompleteDebounceTimer = null;
+		}
 		
 		// Clean up autocomplete element
 		if (this.autocompleteEl) {
