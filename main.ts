@@ -260,8 +260,10 @@ class ToolView extends ItemView {
 	resultDiv: HTMLDivElement;
 	executionDiv: HTMLDivElement;
 	contextDiv: HTMLDivElement;
+	contextCheckbox: HTMLInputElement;
 	isRunning: boolean = false;
 	currentProcess: any = null;
+	contextEnabled: boolean = true;
 	private eventRefs: any[] = [];
 	private autocompleteEl: HTMLDivElement | null = null;
 	private currentAutocompleteItems: string[] = [];
@@ -413,7 +415,23 @@ class ToolView extends ItemView {
 		this.executionDiv = executionDetails.createDiv("execution-text");
 
 		this.contextDiv = container.createDiv("context-container");
-		this.contextDiv.createEl("h3", { text: "Context:" });
+		const contextHeader = this.contextDiv.createDiv("context-header");
+		contextHeader.createEl("h3", { text: "Context:" });
+		
+		const checkboxContainer = contextHeader.createDiv("context-checkbox-container");
+		this.contextCheckbox = checkboxContainer.createEl("input", {
+			type: "checkbox",
+			attr: { id: "context-checkbox" }
+		});
+		this.contextCheckbox.checked = this.contextEnabled;
+		this.contextCheckbox.addEventListener('change', () => {
+			this.contextEnabled = this.contextCheckbox.checked;
+		});
+		
+		checkboxContainer.createEl("label", {
+			text: "Include context",
+			attr: { for: "context-checkbox" }
+		});
 		
 		this.updateContext();
 
@@ -546,6 +564,25 @@ class ToolView extends ItemView {
 			.autocomplete-item.selected {
 				background: var(--interactive-accent);
 				color: var(--text-on-accent);
+			}
+			.context-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 10px;
+			}
+			.context-checkbox-container {
+				display: flex;
+				align-items: center;
+				gap: 5px;
+				font-size: 0.9em;
+			}
+			.context-checkbox-container input[type="checkbox"] {
+				margin: 0;
+			}
+			.context-checkbox-container label {
+				cursor: pointer;
+				color: var(--text-normal);
 			}
 		`;
 		document.head.appendChild(style);
@@ -950,24 +987,28 @@ class ToolView extends ItemView {
 	}
 
 	buildCommand(prompt: string): { command: string, useStdin: boolean, stdinContent: string } {
-		const { file, selection, lineRange } = this.plugin.getCurrentContext();
 		let contextPrompt = prompt;
 		
-		// Add file reference using @file_path syntax (both tools support this)
-		if (file) {
-			contextPrompt += ` @${file.path}`;
-		}
-		
-		// Add selection as compact JSON context if available
-		if (selection && selection.trim()) {
-			const contextData: { selectedText: string, lineRange?: { start: number, end: number } } = { 
-				selectedText: selection 
-			};
-			if (lineRange) {
-				contextData.lineRange = lineRange;
+		// Only add context if checkbox is enabled
+		if (this.contextEnabled) {
+			const { file, selection, lineRange } = this.plugin.getCurrentContext();
+			
+			// Add file reference using @file_path syntax (both tools support this)
+			if (file) {
+				contextPrompt += ` @${file.path}`;
 			}
-			const contextJson = JSON.stringify(contextData);
-			contextPrompt += ` Context: ${contextJson}`;
+			
+			// Add selection as compact JSON context if available
+			if (selection && selection.trim()) {
+				const contextData: { selectedText: string, lineRange?: { start: number, end: number } } = { 
+					selectedText: selection 
+				};
+				if (lineRange) {
+					contextData.lineRange = lineRange;
+				}
+				const contextJson = JSON.stringify(contextData);
+				contextPrompt += ` Context: ${contextJson}`;
+			}
 		}
 
 		// Always use stdin for consistency and robustness
