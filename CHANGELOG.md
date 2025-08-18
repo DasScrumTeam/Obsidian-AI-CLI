@@ -19,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [1.0.6] - 2025-08-18
+
+### Added
+- Context enable/disable checkbox in sidebar UI
+- Platform compatibility warnings for OpenAI Codex (macOS, Linux, and Windows under WSL2 only)
+
+### Changed
+- Updated OpenAI Codex command to use `exec --full-auto --skip-git-repo-check`
+- Improved header spacing by removing top margin from h4 elements
+
+### Fixed
+- UI spacing improvements for better visual hierarchy
+
 ## [1.0.5] - 2025-08-17
 
 ### Added
