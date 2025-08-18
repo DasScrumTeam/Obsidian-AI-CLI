@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS: ObsidianAICliSettings = {
 	qwenPath: 'qwen',
 	claudeParams: '--allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch',
 	geminiParams: '--yolo',
-	codexParams: 'exec --full-auto --skip-git-repo-check',
+	codexParams: 'exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check',
 	qwenParams: '--yolo'
 }
 
@@ -317,6 +317,15 @@ class ToolView extends ItemView {
 		container.empty();
 		container.createEl("h2", { text: this.getDisplayText() });
 
+		// Add platform warning for Codex
+		if (this.toolType === 'codex') {
+			const warningDiv = container.createDiv("codex-warning");
+			warningDiv.createEl("p", {
+				text: "⚠️ Note: OpenAI Codex only works correctly on macOS, Linux, and Windows under WSL2.",
+				cls: "platform-warning"
+			});
+		}
+
 		const promptContainer = container.createDiv("prompt-container");
 		promptContainer.createEl("label", { text: "Prompt:" });
 		
@@ -405,7 +414,7 @@ class ToolView extends ItemView {
 
 		// Result section (always visible)
 		const resultContainer = container.createDiv("result-container");
-		resultContainer.createEl("h3", { text: "Result:" });
+		resultContainer.createEl("h4", { text: "Result:" });
 		this.resultDiv = resultContainer.createDiv("result-text");
 		
 		// Command execution section (collapsible)
@@ -416,7 +425,7 @@ class ToolView extends ItemView {
 
 		this.contextDiv = container.createDiv("context-container");
 		const contextHeader = this.contextDiv.createDiv("context-header");
-		contextHeader.createEl("h3", { text: "Context:" });
+		contextHeader.createEl("h4", { text: "Context:" });
 		
 		const checkboxContainer = contextHeader.createDiv("context-checkbox-container");
 		this.contextCheckbox = checkboxContainer.createEl("input", {
@@ -583,6 +592,25 @@ class ToolView extends ItemView {
 			.context-checkbox-container label {
 				cursor: pointer;
 				color: var(--text-normal);
+			}
+			.codex-warning {
+				margin: 10px 0;
+				padding: 10px;
+				background: var(--background-secondary);
+				border: 1px solid var(--text-warning);
+				border-radius: 4px;
+			}
+			.platform-warning {
+				color: var(--text-warning);
+				font-weight: bold;
+				margin: 0;
+				text-align: center;
+			}
+			.result-container h4 {
+				margin-top: 0;
+			}
+			.context-header h4 {
+				margin-top: 0;
 			}
 		`;
 		document.head.appendChild(style);
@@ -1174,6 +1202,15 @@ class ObsidianAICliSettingTab extends PluginSettingTab {
 
 		// OpenAI Codex Settings
 		containerEl.createEl('h3', {text: 'OpenAI Codex'});
+
+		// Add platform compatibility warning
+		const codexWarning = containerEl.createEl('div', {
+			cls: 'setting-item-description',
+			text: '⚠️ Note: OpenAI Codex only works correctly on macOS, Linux, and Windows under WSL2.'
+		});
+		codexWarning.style.color = 'var(--text-warning)';
+		codexWarning.style.fontWeight = 'bold';
+		codexWarning.style.marginBottom = '10px';
 
 		new Setting(containerEl)
 			.setName('CLI Path')
