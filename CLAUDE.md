@@ -124,7 +124,7 @@ Settings tab provides:
 - **Output Filtering**: Automatically filters "Loaded cached credentials" messages
 
 ### OpenAI Codex
-- **Command**: `codex`
+- **Command**: `codex exec --full-auto --skip-git-repo-check`
 - **Icon**: Custom Codex logo (white geometric pattern)
 - **Context**: Full file references and selected text support
 

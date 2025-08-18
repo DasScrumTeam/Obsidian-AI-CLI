@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS: ObsidianAICliSettings = {
 	qwenPath: 'qwen',
 	claudeParams: '--allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch',
 	geminiParams: '--yolo',
-	codexParams: 'workspace-write --ask-for-approval never',
+	codexParams: 'exec --full-auto --skip-git-repo-check',
 	qwenParams: '--yolo'
 }
 
@@ -864,7 +864,7 @@ class ToolView extends ItemView {
 
 	async runCommandWithSpawn(command: string, cwd: string, stdinContent?: string): Promise<void> {
 		return new Promise((resolve, reject) => {
-			const timeout = 60000;
+			const timeout = 600000;
 			
 			this.currentProcess = spawn(command, [], { 
 				cwd,
@@ -1159,7 +1159,7 @@ class ObsidianAICliSettingTab extends PluginSettingTab {
 			.setName('Parameters')
 			.setDesc('Command line parameters and flags for OpenAI Codex CLI')
 			.addText(text => text
-				.setPlaceholder('workspace-write --ask-for-approval never')
+				.setPlaceholder('exec --full-auto --skip-git-repo-check')
 				.setValue(this.plugin.settings.codexParams)
 				.onChange(async (value) => {
 					this.plugin.settings.codexParams = value;
