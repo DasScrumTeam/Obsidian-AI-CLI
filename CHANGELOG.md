@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+## [1.0.7] - 2025-08-21
+
+### Added
+- Prompt storage and management system using markdown files
+- Save prompt functionality with modal dialog for naming
+- Load prompt functionality with dropdown selection
+- Configurable prompt storage file location in settings (defaults to `ai-prompts.md`)
+- Automatic prompt organization with alphabetical sorting
+- Support for easy manual editing of saved prompts in markdown format
+
+### Changed
+- Enhanced UI with dedicated prompt management section in all AI tool panels
+- Improved settings tab with new "Prompt Storage" section
+
 ## [1.0.6] - 2025-08-18
 
 ### Added

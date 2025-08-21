@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, ItemView, WorkspaceLeaf, TFile, addIcon, MarkdownRenderer, Component } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, ItemView, WorkspaceLeaf, TFile, addIcon, MarkdownRenderer, Component, Modal } from 'obsidian';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { writeFileSync, unlinkSync } from 'fs';
@@ -15,6 +15,7 @@ interface ObsidianAICliSettings {
 	geminiParams: string;
 	codexParams: string;
 	qwenParams: string;
+	promptStorageFile: string;
 }
 
 const DEFAULT_SETTINGS: ObsidianAICliSettings = {
@@ -25,7 +26,8 @@ const DEFAULT_SETTINGS: ObsidianAICliSettings = {
 	claudeParams: '--allowedTools Read,Edit,Write,Bash,Grep,MultiEdit,WebFetch,TodoRead,TodoWrite,WebSearch',
 	geminiParams: '--yolo',
 	codexParams: 'exec --dangerously-bypass-approvals-and-sandbox --skip-git-repo-check',
-	qwenParams: '--yolo'
+	qwenParams: '--yolo',
+	promptStorageFile: 'ai-prompts.md'
 }
 
 const CLAUDE_VIEW_TYPE = 'claude-code-view';
@@ -248,6 +250,100 @@ export default class ObsidianAICliPlugin extends Plugin {
 		
 		return expandedPrompt;
 	}
+
+	async loadPrompts(): Promise<{[key: string]: string}> {
+		const file = this.app.vault.getAbstractFileByPath(this.settings.promptStorageFile);
+		if (!(file instanceof TFile)) {
+			return {};
+		}
+
+		try {
+			const content = await this.app.vault.read(file);
+			const prompts: {[key: string]: string} = {};
+			
+			// Parse markdown headings and content
+			const lines = content.split('\n');
+			let currentPromptName = '';
+			let currentPromptContent: string[] = [];
+			
+			for (const line of lines) {
+				const headingMatch = line.match(/^#+ (.+)$/);
+				if (headingMatch) {
+					// Save previous prompt if exists
+					if (currentPromptName && currentPromptContent.length > 0) {
+						prompts[currentPromptName] = currentPromptContent.join('\n').trim();
+					}
+					// Start new prompt
+					currentPromptName = headingMatch[1];
+					currentPromptContent = [];
+				} else if (currentPromptName) {
+					// Add content to current prompt
+					currentPromptContent.push(line);
+				}
+			}
+			
+			// Save last prompt
+			if (currentPromptName && currentPromptContent.length > 0) {
+				prompts[currentPromptName] = currentPromptContent.join('\n').trim();
+			}
+			
+			return prompts;
+		} catch (error) {
+			console.error('Failed to load prompts:', error);
+			return {};
+		}
+	}
+
+	async savePrompt(name: string, content: string): Promise<void> {
+		// Ensure we have a valid prompt name and content
+		if (!name.trim() || !content.trim()) {
+			throw new Error('Prompt name and content cannot be empty');
+		}
+
+		let file = this.app.vault.getAbstractFileByPath(this.settings.promptStorageFile);
+		let fileContent = '';
+		let prompts: {[key: string]: string} = {};
+		
+		// Load existing prompts if file exists
+		if (file instanceof TFile) {
+			prompts = await this.loadPrompts();
+		}
+		
+		// Add or update the prompt
+		prompts[name] = content;
+		
+		// Generate markdown content
+		const sortedNames = Object.keys(prompts).sort();
+		for (const promptName of sortedNames) {
+			fileContent += `# ${promptName}\n\n${prompts[promptName]}\n\n`;
+		}
+		
+		// Create or update the file
+		if (file instanceof TFile) {
+			await this.app.vault.modify(file, fileContent);
+		} else {
+			await this.app.vault.create(this.settings.promptStorageFile, fileContent);
+		}
+	}
+
+	async deletePrompt(name: string): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(this.settings.promptStorageFile);
+		if (!(file instanceof TFile)) {
+			return;
+		}
+
+		const prompts = await this.loadPrompts();
+		delete prompts[name];
+		
+		// Regenerate file content without the deleted prompt
+		let fileContent = '';
+		const sortedNames = Object.keys(prompts).sort();
+		for (const promptName of sortedNames) {
+			fileContent += `# ${promptName}\n\n${prompts[promptName]}\n\n`;
+		}
+		
+		await this.app.vault.modify(file, fileContent);
+	}
 }
 
 class ToolView extends ItemView {
@@ -256,6 +352,9 @@ class ToolView extends ItemView {
 	promptInput: HTMLTextAreaElement;
 	runButton: HTMLButtonElement;
 	cancelButton: HTMLButtonElement;
+	savePromptButton: HTMLButtonElement;
+	loadPromptButton: HTMLButtonElement;
+	promptDropdown: HTMLSelectElement;
 	outputDiv: HTMLDivElement;
 	resultDiv: HTMLDivElement;
 	executionDiv: HTMLDivElement;
@@ -397,6 +496,33 @@ class ToolView extends ItemView {
 			this.invalidateFileCache();
 		}));
 
+		// Prompt management section
+		const promptManagementContainer = promptContainer.createDiv("prompt-management");
+		promptManagementContainer.createEl("label", { text: "Saved Prompts:" });
+		
+		const promptManagementButtons = promptManagementContainer.createDiv("prompt-management-buttons");
+		
+		this.promptDropdown = promptManagementButtons.createEl("select", {
+			cls: "prompt-dropdown"
+		});
+		this.promptDropdown.createEl("option", { 
+			text: "Select a saved prompt...",
+			value: ""
+		});
+		this.promptDropdown.onchange = () => this.loadSelectedPrompt();
+		
+		this.loadPromptButton = promptManagementButtons.createEl("button", {
+			text: "Load",
+			cls: "load-prompt-button"
+		});
+		this.loadPromptButton.onclick = () => this.loadSelectedPrompt();
+		
+		this.savePromptButton = promptManagementButtons.createEl("button", {
+			text: "Save",
+			cls: "save-prompt-button"
+		});
+		this.savePromptButton.onclick = () => this.showSavePromptDialog();
+
 		const buttonContainer = promptContainer.createDiv("button-container");
 		
 		this.runButton = buttonContainer.createEl("button", {
@@ -443,6 +569,7 @@ class ToolView extends ItemView {
 		});
 		
 		this.updateContext();
+		this.refreshPromptDropdown();
 
 		this.addStyles();
 	}
@@ -611,6 +738,49 @@ class ToolView extends ItemView {
 			}
 			.context-header h4 {
 				margin-top: 0;
+			}
+			.prompt-management {
+				margin: 10px 0;
+				padding: 10px;
+				background: var(--background-secondary);
+				border-radius: 4px;
+				border: 1px solid var(--background-modifier-border);
+			}
+			.prompt-management label {
+				display: block;
+				margin-bottom: 8px;
+				font-weight: bold;
+			}
+			.prompt-management-buttons {
+				display: flex;
+				gap: 8px;
+				align-items: center;
+			}
+			.prompt-dropdown {
+				flex: 1;
+				padding: 6px;
+				border: 1px solid var(--background-modifier-border);
+				border-radius: 4px;
+				background: var(--background-primary);
+			}
+			.load-prompt-button, .save-prompt-button {
+				padding: 6px 12px;
+				border: none;
+				border-radius: 4px;
+				cursor: pointer;
+				font-size: 0.9em;
+			}
+			.load-prompt-button {
+				background: var(--interactive-accent);
+				color: var(--text-on-accent);
+			}
+			.save-prompt-button {
+				background: var(--text-success);
+				color: white;
+			}
+			.load-prompt-button:disabled, .save-prompt-button:disabled {
+				background: var(--background-modifier-border);
+				cursor: not-allowed;
 			}
 		`;
 		document.head.appendChild(style);
@@ -826,6 +996,72 @@ class ToolView extends ItemView {
 		}
 		
 		this.hideAutocomplete();
+	}
+
+	async refreshPromptDropdown() {
+		// Clear existing options except the first one
+		while (this.promptDropdown.children.length > 1) {
+			this.promptDropdown.removeChild(this.promptDropdown.lastChild!);
+		}
+
+		try {
+			const prompts = await this.plugin.loadPrompts();
+			const promptNames = Object.keys(prompts).sort();
+			
+			for (const name of promptNames) {
+				const option = this.promptDropdown.createEl("option", {
+					text: name,
+					value: name
+				});
+			}
+		} catch (error) {
+			console.error('Failed to refresh prompt dropdown:', error);
+		}
+	}
+
+	async loadSelectedPrompt() {
+		const selectedPromptName = this.promptDropdown.value;
+		if (!selectedPromptName) {
+			return;
+		}
+
+		try {
+			const prompts = await this.plugin.loadPrompts();
+			const promptContent = prompts[selectedPromptName];
+			
+			if (promptContent) {
+				this.promptInput.value = promptContent;
+				this.promptInput.focus();
+			} else {
+				new Notice(`Prompt "${selectedPromptName}" not found`);
+				this.refreshPromptDropdown(); // Refresh in case the file was modified externally
+			}
+		} catch (error) {
+			console.error('Failed to load prompt:', error);
+			new Notice('Failed to load prompt');
+		}
+	}
+
+	async showSavePromptDialog() {
+		const promptContent = this.promptInput.value.trim();
+		if (!promptContent) {
+			new Notice('Please enter a prompt before saving');
+			return;
+		}
+
+		// Create a simple input dialog
+		const modal = new SavePromptModal(this.plugin.app, async (name: string) => {
+			try {
+				await this.plugin.savePrompt(name, promptContent);
+				new Notice(`Prompt "${name}" saved successfully`);
+				this.refreshPromptDropdown();
+			} catch (error) {
+				console.error('Failed to save prompt:', error);
+				new Notice(`Failed to save prompt: ${error.message}`);
+			}
+		});
+
+		modal.open();
 	}
 
 	updateContext() {
@@ -1115,6 +1351,88 @@ class ToolView extends ItemView {
 	}
 }
 
+class SavePromptModal extends Modal {
+	private onSubmit: (name: string) => Promise<void>;
+	private nameInput: HTMLInputElement;
+
+	constructor(app: App, onSubmit: (name: string) => Promise<void>) {
+		super(app);
+		this.onSubmit = onSubmit;
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+
+		contentEl.createEl('h2', { text: 'Save Prompt' });
+
+		const form = contentEl.createEl('form');
+		form.style.display = 'flex';
+		form.style.flexDirection = 'column';
+		form.style.gap = '15px';
+
+		const inputContainer = form.createDiv();
+		inputContainer.createEl('label', { 
+			text: 'Prompt name:',
+			attr: { for: 'prompt-name' }
+		});
+		
+		this.nameInput = inputContainer.createEl('input', {
+			type: 'text',
+			attr: { 
+				id: 'prompt-name',
+				placeholder: 'Enter a name for this prompt...'
+			}
+		});
+		this.nameInput.style.width = '100%';
+		this.nameInput.style.marginTop = '5px';
+		this.nameInput.style.padding = '8px';
+		this.nameInput.style.border = '1px solid var(--background-modifier-border)';
+		this.nameInput.style.borderRadius = '4px';
+
+		const buttonContainer = form.createDiv();
+		buttonContainer.style.display = 'flex';
+		buttonContainer.style.gap = '10px';
+		buttonContainer.style.justifyContent = 'flex-end';
+
+		const cancelButton = buttonContainer.createEl('button', {
+			text: 'Cancel',
+			type: 'button'
+		});
+		cancelButton.style.padding = '8px 16px';
+		cancelButton.onclick = () => this.close();
+
+		const saveButton = buttonContainer.createEl('button', {
+			text: 'Save',
+			type: 'submit'
+		});
+		saveButton.style.padding = '8px 16px';
+		saveButton.style.background = 'var(--interactive-accent)';
+		saveButton.style.color = 'var(--text-on-accent)';
+		saveButton.style.border = 'none';
+		saveButton.style.borderRadius = '4px';
+
+		form.onsubmit = async (e) => {
+			e.preventDefault();
+			const name = this.nameInput.value.trim();
+			if (name) {
+				await this.onSubmit(name);
+				this.close();
+			} else {
+				new Notice('Please enter a prompt name');
+			}
+		};
+
+		// Focus the input field
+		setTimeout(() => this.nameInput.focus(), 50);
+	}
+
+	onClose() {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
 class ObsidianAICliSettingTab extends PluginSettingTab {
 	plugin: ObsidianAICliPlugin;
 
@@ -1276,6 +1594,20 @@ class ObsidianAICliSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.qwenParams)
 				.onChange(async (value) => {
 					this.plugin.settings.qwenParams = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Prompt Storage Settings
+		containerEl.createEl('h3', {text: 'Prompt Storage'});
+
+		new Setting(containerEl)
+			.setName('Prompt Storage File')
+			.setDesc('Path to the markdown file where saved prompts will be stored. The file will be created automatically when you save your first prompt.')
+			.addText(text => text
+				.setPlaceholder('ai-prompts.md')
+				.setValue(this.plugin.settings.promptStorageFile)
+				.onChange(async (value) => {
+					this.plugin.settings.promptStorageFile = value || 'ai-prompts.md';
 					await this.plugin.saveSettings();
 				}));
 
